@@ -1,0 +1,85 @@
+server {
+	listen 80 default_server;
+
+	root <filesystem>;
+	index index.html index.htm;
+
+	server_name localhost;
+
+	charset utf-8;
+
+	# Buffer log writes to speed up IO, or disable them altogether
+	#access_log /var/log/nginx/access.log main buffer=16k;
+	access_log off;
+
+	# Sendfile copies data between one FD and other from within the kernel.
+	# More efficient than read() + write(), since the requires transferring data to and from the user space.
+	sendfile on;
+
+	# Tcp_nopush causes nginx to attempt to send its HTTP response head in one packet,
+	# instead of using partial frames. This is useful for prepending headers before calling sendfile,
+	# or for throughput optimization.
+	tcp_nopush on;
+
+	# don't buffer data-sends (disable Nagle algorithm). Good for sending frequent small bursts of data in real time.
+	tcp_nodelay on;
+
+	# Timeout for keep-alive connections. Server will close connections after this time.
+	keepalive_timeout 30;
+
+	# allow the server to close the connection after a client stops responding. Frees up socket-associated memory.
+	reset_timedout_connection on;
+
+	# Compression. Reduces the amount of data that needs to be transferred over the network
+	gzip on;
+	gzip_disable "MSIE [1-6]\.(?!.*SV1)";
+	gzip_vary on;
+	gzip_proxied any;
+	gzip_comp_level 6;
+	gzip_buffers 16 8k;
+	gzip_http_version 1.0;
+	gzip_min_length 1280;
+	gzip_types text/plain text/css application/json application/javascript application/x-javascript text/xml application/xml application/xml+rss text/javascript image/x-icon image/bmp;
+
+	location ~* \.(?:ico|css|js|gif|jpe?g|png|bmp|swf)$ {
+		expires max; #30d
+		add_header Pragma "public";
+		add_header Cache-Control "public";
+	}
+
+	location /api {
+		rewrite ^/(.*) /$1 break;
+
+		proxy_pass http://127.0.0.1:3000/;
+		proxy_redirect off;
+
+		proxy_set_header Host $host;
+		proxy_set_header X-Real-IP $remote_addr;
+		proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+	}
+
+	location / {
+		expires -1;
+		add_header Pragma "no-cache";
+		add_header Cache-Control "no-store, no-cache, must-revalidate, post-check=0, pre-check=0";
+
+		# try_files $uri /index.html;
+		try_files $uri $uri/ /index.html =404;
+	}
+
+	error_page 404 /404.html;
+
+	# redirect server error pages to the static page /50x.html
+	#
+	error_page 500 502 503 504 /50x.html;
+	location = /50x.html {
+		root /usr/share/nginx/html;
+	}
+
+	# deny access to .htaccess files, if Apache's document root
+	# concurs with nginx's one
+	#
+	location ~ /\.ht {
+		deny all;
+	}
+}
