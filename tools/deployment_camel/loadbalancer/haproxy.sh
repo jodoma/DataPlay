@@ -9,6 +9,8 @@ set -ex
 #	exit 1
 #fi
 
+source $(dir $0)/../helper.sh
+
 if [ "$(id -u)" != "0" ]; then
 LOGDIR=${PWD}/var/log/dataplay
 #PROJECTDIR=/opt/dataplay
@@ -19,46 +21,15 @@ fi
 LOGFILENAME=haproxy.log
 LOGFILE=$LOGDIR/$LOGFILENAME
 
-#Loging functions
-function logsetup {
-	if [ ! -d $LOGDIR ]; then
-		mkdir -p $LOGDIR
-	fi
-	if [ ! -f $LOGFILE ]; then
-		touch $LOGFILE
-	fi
-}
-
-function log {
- 	echo "$*"
-        echo "[$(date)]: $*" >> $LOGFILE
-}
-
 logsetup
 
-# attempting to set local ip
-if [ -z ${CONTAINER_IP+123} ] ; then 
-	MESSAGE="Environment variable CONTAINER_IP required, but not set."
-	log $MESSAGE
-	exit 3
-elif [ -z ${CONTAINER_IP} ] ; then
-	MESSAGE="Environment variable CONTAINER_IP required, but not set to reasonable value."
-	log $MESSAGE
-	exit 3
-fi 
+verify_variable_set "CONTAINER_IP"
+verify_variable_set "PUBLIC_PublicLoadBalancerPort"
 
-if [ -z ${PUBLIC_PublicLoadBalancerPort+123} ] ; then 
-	MESSAGE="Environment variable for PublicLoadBalancerPort required, but not set."
-	log $MESSAGE
-	exit 3
-elif [ -z ${PUBLIC_PublicLoadBalancerPort} ] ; then
-	MESSAGE="Environment variable PUBLIC_PublicLoadBalancerPort+123 required, but not set to reasonable value."
-	log $MESSAGE
-	exit 3
-fi 
+verify_variable_notempty "CONTAINER_IP"
+verify_variable_notempty "PUBLIC_PublicLoadBalancerPort"
 
 CONTAINER_HOST_IP=$CONTAINER_IP
-
 GO_VERSION="go1.4.3"
 
 HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
@@ -175,17 +146,8 @@ update_config_file() {
 
 echo "" > ${PWD}/haproxy.cfg
 
-if [ -z ${CLOUD_MasterDownstreamPort+123} ] ; then
-        MESSAGE="Environment variable CLOUD_MasterDownstreamPort required, but not set."
-        log $MESSAGE
-        exit 3
-fi 
-
-if [ -z ${CLOUD_GamificationDownstreamPort+123} ] ; then
-        MESSAGE="Environment variable CLOUD_GamificationDownstreamPort required, but not set."
-        log $MESSAGE
-        exit 3
-fi 
+verify_variable_set "CLOUD_MasterDownstreamPort"
+verify_variable_set "CLOUD_GamificationDownstreamPort"
 
 print_config_file_header
 
