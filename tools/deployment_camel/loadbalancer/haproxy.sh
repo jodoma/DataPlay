@@ -4,22 +4,221 @@
 
 set -ex
 
+#if [ "$(id -u)" != "0" ]; then
+#	echo >&2 "Error: This script must be run as user 'root'";
+#	exit 1
+#fi
+
 if [ "$(id -u)" != "0" ]; then
-	echo >&2 "Error: This script must be run as user 'root'";
-	exit 1
+LOGDIR=${PWD}/var/log/dataplay
+#PROJECTDIR=/opt/dataplay
+else
+LOGDIR=/var/log/dataplay
+#PROJECTDIR=/opt/dataplay
 fi
+LOGFILENAME=haproxy.log
+LOGFILE=$LOGDIR/$LOGFILENAME
+
+#Loging functions
+function logsetup {
+	if [ ! -d $LOGDIR ]; then
+		mkdir -p $LOGDIR
+	fi
+	if [ ! -f $LOGFILE ]; then
+		touch $LOGFILE
+	fi
+}
+
+function log {
+ 	echo "$*"
+        echo "[$(date)]: $*" >> $LOGFILE
+}
+
+logsetup
+
+# attempting to set local ip
+if [ -z ${CONTAINER_IP+123} ] ; then 
+	MESSAGE="Environment variable CONTAINER_IP required, but not set."
+	log $MESSAGE
+	exit 3
+elif [ -z ${CONTAINER_IP} ] ; then
+	MESSAGE="Environment variable CONTAINER_IP required, but not set to reasonable value."
+	log $MESSAGE
+	exit 3
+fi 
+
+if [ -z ${PUBLIC_PublicLoadBalancerPort+123} ] ; then 
+	MESSAGE="Environment variable for PublicLoadBalancerPort required, but not set."
+	log $MESSAGE
+	exit 3
+elif [ -z ${PUBLIC_PublicLoadBalancerPort} ] ; then
+	MESSAGE="Environment variable PUBLIC_PublicLoadBalancerPort+123 required, but not set to reasonable value."
+	log $MESSAGE
+	exit 3
+fi 
+
+CONTAINER_HOST_IP=$CONTAINER_IP
 
 GO_VERSION="go1.4.3"
 
-HOST=$(ipconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
+HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
 PORT="1938"
 
 # REDIS_HOST="109.231.121.13"
 REDIS_HOST="abcd" #$(ss-get --timeout 360 redis.hostname)
 REDIS_PORT="6379"
 
-JCATASCOPIA_REPO="109.231.126.62"
-JCATASCOPIA_DASHBOARD="109.231.122.112"
+#JCATASCOPIA_REPO="109.231.126.62"
+#JCATASCOPIA_DASHBOARD="109.231.122.112"
+
+print_config_file_header() {
+echo "global" >> ${PWD}/haproxy.cfg
+echo "   log /dev/log    local0" >> ${PWD}/haproxy.cfg
+echo "   log /dev/log    local1 notice" >> ${PWD}/haproxy.cfg
+echo "   chroot /var/lib/haproxy >> ${PWD}/haproxy.cfg" >> ${PWD}/haproxy.cfg
+echo "   stats socket /run/haproxy/admin.sock mode 660 level admin" >> ${PWD}/haproxy.cfg
+echo "   stats timeout 30s" >> ${PWD}/haproxy.cfg
+echo "   user haproxy" >> ${PWD}/haproxy.cfg
+echo "   group haproxy" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "   # Default SSL material locations" >> ${PWD}/haproxy.cfg
+echo "   ca-base /etc/ssl/certs" >> ${PWD}/haproxy.cfg
+echo "   crt-base /etc/ssl/private" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "   # Default ciphers to use on SSL-enabled listening sockets." >> ${PWD}/haproxy.cfg
+echo "   # For more information, see ciphers(1SSL)." >> ${PWD}/haproxy.cfg
+echo "   ssl-default-bind-ciphers kEECDH+aRSA+AES:kRSA+AES:+AES256:RC4-SHA:!kEDH:!LOW:!EXP:!MD5:!aNULL:!eNULL" >> ${PWD}/haproxy.cfg
+echo ""  >> ${PWD}/haproxy.cfg
+echo "defaults" >> ${PWD}/haproxy.cfg
+echo "    log     global" >> ${PWD}/haproxy.cfg
+echo "    mode    http" >> ${PWD}/haproxy.cfg
+echo "    balance roundrobin" >> ${PWD}/haproxy.cfg
+echo ""   >> ${PWD}/haproxy.cfg
+echo "    option  abortonclose # abort request if client closes output channel while waiting" >> ${PWD}/haproxy.cfg
+echo "    option  httpclose # add "Connection:close" header if it is missing" >> ${PWD}/haproxy.cfg
+echo "    option  forwardfor # insert x-forwarded-for header so that app servers can see both proxy and client IPs" >> ${PWD}/haproxy.cfg
+echo "    option  redispatch # any server can handle any session" >> ${PWD}/haproxy.cfg
+echo "    option  http-server-close # allows keep-alive and pipelining" >> ${PWD}/haproxy.cfg
+echo "    option  httplog" >> ${PWD}/haproxy.cfg
+echo "    option  dontlognull" >> ${PWD}/haproxy.cfg
+echo "    timeout connect 5s" >> ${PWD}/haproxy.cfg
+echo "    timeout client  600s" >> ${PWD}/haproxy.cfg
+echo "    timeout server  600s" >> ${PWD}/haproxy.cfg
+echo "    timeout check   5s" >> ${PWD}/haproxy.cfg
+echo "    timeout http-keep-alive 300s" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "    retries 3 # number of connection retries for the session" >> ${PWD}/haproxy.cfg
+echo "    maxconn 10000" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "    http-check expect status 200" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "    errorfile 400 /etc/haproxy/errors/400.http" >> ${PWD}/haproxy.cfg
+echo "    errorfile 403 /etc/haproxy/errors/403.http" >> ${PWD}/haproxy.cfg
+echo "    errorfile 408 /etc/haproxy/errors/408.http" >> ${PWD}/haproxy.cfg
+echo "    errorfile 500 /etc/haproxy/errors/500.http" >> ${PWD}/haproxy.cfg
+echo "    errorfile 502 /etc/haproxy/errors/502.http" >> ${PWD}/haproxy.cfg
+echo "    errorfile 503 /etc/haproxy/errors/503.http" >> ${PWD}/haproxy.cfg
+echo "    errorfile 504 /etc/haproxy/errors/504.http" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "frontend web" >> ${PWD}/haproxy.cfg
+echo "    bind *:80" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "    # API traffic goes to Master cluster" >> ${PWD}/haproxy.cfg
+echo "    acl api path_beg /api" >> ${PWD}/haproxy.cfg
+echo "    use_backend masters if api" >> ${PWD}/haproxy.cfg
+echo "" >> ${PWD}/haproxy.cfg
+echo "    # Other traffic goes to Gamification server" >> ${PWD}/haproxy.cfg
+echo "    default_backend gamification" >> ${PWD}/haproxy.cfg
+}
+
+print_config_file_misc() {
+echo "" >> ${PWD}/haproxy.cfg
+echo "    {% for node in master %}" >> ${PWD}/haproxy.cfg
+echo "    server {{ node.id|lower }} {{ node.endpoint }} cookie {{ node.id|upper }} check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
+}
+
+print_config_file_footer() {
+echo "" >> ${PWD}/haproxy.cfg
+echo "listen stats *:1936" >> ${PWD}/haproxy.cfg
+echo "    stats enable" >> ${PWD}/haproxy.cfg
+echo "    stats uri /" >> ${PWD}/haproxy.cfg
+echo "    stats hide-version" >> ${PWD}/haproxy.cfg
+echo "    stats auth playgen:D@taP1aY" >> ${PWD}/haproxy.cfg
+}
+
+add_gamification_prefix() {
+echo "" >> ${PWD}/haproxy.cfg
+echo "backend gamification" >> ${PWD}/haproxy.cfg
+echo "    http-request set-header X-Forwarded-Port ${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
+echo "    http-request add-header X-Forwarded-Proto https if { ssl_fc }" >> ${PWD}/haproxy.cfg
+echo "    option httpchk HEAD / HTTP/1.1\r\nHost:localhost" >> ${PWD}/haproxy.cfg
+echo "    cookie DPSession prefix" >> ${PWD}/haproxy.cfg
+}
+
+add_master_prefix() {
+echo "" >> ${PWD}/haproxy.cfg
+echo "backend masters" >> ${PWD}/haproxy.cfg
+echo "    http-request set-header X-Forwarded-Port ${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
+echo "    http-request add-header X-Forwarded-Proto https if { ssl_fc }" >> ${PWD}/haproxy.cfg
+echo "    option httpchk HEAD /api/ping HTTP/1.1\r\nHost:localhost" >> ${PWD}/haproxy.cfg
+echo "    cookie DPSession prefix" >> ${PWD}/haproxy.cfg
+}
+
+add_master_node() {
+# echo "    {% for node in gamification %}" >> ${PWD}/haproxy.cfg
+echo "    server master${2} lower cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+# echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
+}
+
+update_config_file() {
+
+echo "" > ${PWD}/haproxy.cfg
+
+if [ -z ${CLOUD_MasterDownstreamPort+123} ] ; then
+        MESSAGE="Environment variable CLOUD_MasterDownstreamPort required, but not set."
+        log $MESSAGE
+        exit 3
+fi 
+
+if [ -z ${CLOUD_GamificationDownstreamPort+123} ] ; then
+        MESSAGE="Environment variable CLOUD_GamificationDownstreamPort required, but not set."
+        log $MESSAGE
+        exit 3
+fi 
+
+print_config_file_header
+
+counter=0
+add_master_prefix
+if [ -z ${CLOUD_MasterDownstreamPort} ] ; then 
+	log "no master downstream nodes set"
+else 
+    arr=$(echo $CLOUD_MasterDownstreamPort | tr "," "\n")
+    for x in $arr
+    ## take the last one (for no particular reason)
+        do
+		add_master_node $x, $counter
+                log "CLOUD_MasterDownstreamPort > [$x]"
+		counter=$((counter+1))
+        done
+fi
+
+add_gamification_prefix
+if [ -z ${CLOUD_GamificationDownstreamPort} ] ; then 
+	log "no gamification downstream nodes set"
+else 
+    arr=$(echo $CLOUD_GamificationDownstreamPort | tr "," "\n")
+    for x in $arr
+    ## take the last one (for no particular reason)
+        do
+                log "CLOUD_GamificationDownstreamPort > [$x]"
+        done
+fi
+
+print_config_file_footer
+
+}
 
 timestamp () {
 	date +"%F %T,%3N"
@@ -43,7 +242,7 @@ install_haproxy () {
 	echo '$UDPServerRun 514' >> /etc/rsyslog.conf
 
 	service rsyslog restart
-	service haproxy restart
+	service haproxy stop
 	update-rc.d haproxy disable
 }
 
@@ -187,6 +386,8 @@ case "$1" in
 			#setup_haproxy_api
 			;;
 		configure)
+			update_config_file
+			/usr/bin/sudo sed -i -e 's/daemon//g' /etc/haproxy/haproxy.cfg
 			#echo "[$(timestamp)] ---- 4. Install GO ----"
 			#install_go
 			#echo "[$(timestamp)] ---- 5. Export Variables ----"
@@ -197,6 +398,7 @@ case "$1" in
 			#update_iptables
 			;;
 		start)
+			/usr/sbin/haproxy -f /etc/haproxy/haproxy.cfg  -p /var/run/haproxy.pid
 			;;
 		stop)
 			;;
@@ -204,8 +406,12 @@ case "$1" in
 			;;
 		stopdetect)
 			;;
+		updateports)
+			update_config_file
+			;;
 esac
 
 echo "[$(timestamp)] ---- Completed ----"
 
 exit 0
+
