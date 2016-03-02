@@ -4,10 +4,21 @@
 
 set -ex
 
+source $(dirname $0)/../helper.sh
+
 if [ "$(id -u)" != "0" ]; then
-	echo >&2 "Error: This script must be run as user 'root'";
-	exit 1
+	LOGDIR=${PWD}/var/log/dataplay
+	#PROJECTDIR=/opt/dataplay
+else
+	LOGDIR=/var/log/dataplay
+	#PROJECTDIR=/opt/dataplay
 fi
+
+LOCAL_DIR=$(dirname $0)
+
+LOGFILENAME=frontend.log
+LOGFILE=$LOGDIR/$LOGFILENAME
+
 
 DEST="/home/ubuntu/www"
 APP="dataplay"
@@ -18,14 +29,14 @@ APP_PORT="80"
 APP_TYPE="gamification"
 
 # LOADBALANCER_HOST="109.231.121.26"
-LOADBALANCER_HOST=$(ss-get --timeout 360 loadbalancer.hostname)
-LOADBALANCER_REQUEST_PORT="80"
-LOADBALANCER_API_PORT="1937"
+# LOADBALANCER_HOST=$(ss-get --timeout 360 loadbalancer.hostname)
+# LOADBALANCER_REQUEST_PORT="80"
+# LOADBALANCER_API_PORT="1937"
 # DOMAIN="dataplay.playgen.com"
-DOMAIN="${LOADBALANCER_HOST}:${LOADBALANCER_REQUEST_PORT}"
+# DOMAIN="${LOADBALANCER_HOST}:${LOADBALANCER_REQUEST_PORT}"
 
-JCATASCOPIA_REPO="109.231.126.62"
-JCATASCOPIA_DASHBOARD="109.231.122.112"
+#JCATASCOPIA_REPO="109.231.126.62"
+#JCATASCOPIA_DASHBOARD="109.231.122.112"
 
 timestamp () {
 	date +"%F %T,%3N"
@@ -37,16 +48,16 @@ setuphost () {
 	echo "$HOSTLOCAL $HOSTNAME" >> /etc/hosts
 }
 
-export_variables () {
-	echo "export DP_LOADBALANCER_HOST=$LOADBALANCER_HOST" >> /etc/profile.d/dataplay.sh
-	echo "export DP_LOADBALANCER_REQUEST_PORT=$LOADBALANCER_REQUEST_PORT" >> /etc/profile.d/dataplay.sh
-	echo "export DP_LOADBALANCER_API_PORT=$LOADBALANCER_API_PORT" >> /etc/profile.d/dataplay.sh
-	echo "export DP_DOMAIN=$DOMAIN" >> /etc/profile.d/dataplay.sh
-
-	. /etc/profile
-
-	su - ubuntu -c ". /etc/profile"
-}
+#export_variables () {
+#	echo "export DP_LOADBALANCER_HOST=$LOADBALANCER_HOST" >> /etc/profile.d/dataplay.sh
+#	echo "export DP_LOADBALANCER_REQUEST_PORT=$LOADBALANCER_REQUEST_PORT" >> /etc/profile.d/dataplay.sh
+#	echo "export DP_LOADBALANCER_API_PORT=$LOADBALANCER_API_PORT" >> /etc/profile.d/dataplay.sh
+#	echo "export DP_DOMAIN=$DOMAIN" >> /etc/profile.d/dataplay.sh
+#
+#	. /etc/profile
+#
+#	su - ubuntu -c ". /etc/profile"
+#}
 
 install_nginx () {
 	URL="https://raw.githubusercontent.com"
@@ -66,12 +77,14 @@ install_nginx () {
 	destination="$DEST/$APP/$WWW/dist"
 
 	cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.$unixts
-	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/app/nginx.default -O /etc/nginx/sites-available/default
+	#wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/app/nginx.default -O /etc/nginx/sites-available/default
+	cp $LOCAL_DIR/nginx.default -O /etc/nginx/sites-available/default
 	sed -i 's,'"$keyword"','"$destination"',g' /etc/nginx/sites-available/default
 
 	chown ubuntu:www-data $DEST/$APP/$WWW
 
-	service nginx reload
+	service nginx stop
+	update-rc.d nginx disable
 }
 
 download_app () {
@@ -145,37 +158,42 @@ setup_JCatascopiaAgent(){
 	rm ./jcatascopia-agent.sh
 }
 
-echo "[$(timestamp)] ---- 1. Setup Host ----"
-setuphost
+case "$1" in
+	install)
+		echo "[$(timestamp)] ---- 1. Setup Host ----"
+		setuphost
+		# echo "[$(timestamp)] ---- 2. Export Variables ----"
+		# export_variables
+		echo "[$(timestamp)] ---- 3. Install Nginx ----"
+		install_nginx
+		echo "[$(timestamp)] ---- 4. Download Application ----"
+		download_app
+		# We either Init frontend which is quicker and doesn't install any extra libraries
+		# or do configure and build which is very time consuming process due to lots of node.js libraries
+		;;
+	configure)
+		echo "[$(timestamp)] ---- 5. Init Frotnend ----"
+		init_frontend
+		# echo "[$(timestamp)] ---- 6. Configure Frotnend ----"
+		# configure_frontend
+		# echo "[$(timestamp)] ---- 7. Build Frontend ----"
+		# su ubuntu -c "$(typeset -f build_frontend); build_frontend" # Run function as user 'ubuntu'
+		# echo "[$(timestamp)] ---- 6. Inform Load Balancer (Add) ----"
+		# inform_loadbalancer
+		echo "[$(timestamp)] ---- 7. Setup Service Script ----"
+		setup_service_script
+		;;
+	start)
+		;;
+	stop)
+		;;
+	startdetect)
+		;;
+	stopdetect)
+		;;
+	updateports)
+		;;
 
-echo "[$(timestamp)] ---- 2. Export Variables ----"
-export_variables
-
-echo "[$(timestamp)] ---- 3. Install Nginx ----"
-install_nginx
-
-echo "[$(timestamp)] ---- 4. Download Application ----"
-download_app
-
-# We either Init frontend which is quicker and doesn't install any extra libraries
-# or do configure and build which is very time consuming process due to lots of node.js libraries
-echo "[$(timestamp)] ---- 5. Init Frotnend ----"
-init_frontend
-
-# echo "[$(timestamp)] ---- 6. Configure Frotnend ----"
-# configure_frontend
-
-# echo "[$(timestamp)] ---- 7. Build Frontend ----"
-# su ubuntu -c "$(typeset -f build_frontend); build_frontend" # Run function as user 'ubuntu'
-
-echo "[$(timestamp)] ---- 6. Inform Load Balancer (Add) ----"
-inform_loadbalancer
-
-echo "[$(timestamp)] ---- 7. Setup Service Script ----"
-setup_service_script
-
-echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
-setup_JCatascopiaAgent
 
 echo "[$(timestamp)] ---- Completed ----"
 
