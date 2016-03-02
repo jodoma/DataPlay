@@ -9,7 +9,7 @@ set -ex
 #	exit 1
 #fi
 
-source $(dir $0)/../helper.sh
+source $(dirname $0)/../helper.sh
 
 if [ "$(id -u)" != "0" ]; then
 LOGDIR=${PWD}/var/log/dataplay
@@ -92,7 +92,7 @@ echo "    errorfile 503 /etc/haproxy/errors/503.http" >> ${PWD}/haproxy.cfg
 echo "    errorfile 504 /etc/haproxy/errors/504.http" >> ${PWD}/haproxy.cfg
 echo "" >> ${PWD}/haproxy.cfg
 echo "frontend web" >> ${PWD}/haproxy.cfg
-echo "    bind *:80" >> ${PWD}/haproxy.cfg
+echo "    bind *:${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
 echo "" >> ${PWD}/haproxy.cfg
 echo "    # API traffic goes to Master cluster" >> ${PWD}/haproxy.cfg
 echo "    acl api path_beg /api" >> ${PWD}/haproxy.cfg
@@ -111,7 +111,7 @@ echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
 
 print_config_file_footer() {
 echo "" >> ${PWD}/haproxy.cfg
-echo "listen stats *:${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
+echo "listen stats *:${CLOUD_LoadBalancerStatsPort}" >> ${PWD}/haproxy.cfg
 echo "    stats enable" >> ${PWD}/haproxy.cfg
 echo "    stats uri /" >> ${PWD}/haproxy.cfg
 echo "    stats hide-version" >> ${PWD}/haproxy.cfg
@@ -138,7 +138,13 @@ echo "    cookie DPSession prefix" >> ${PWD}/haproxy.cfg
 
 add_master_node() {
 # echo "    {% for node in gamification %}" >> ${PWD}/haproxy.cfg
-echo "    server master${2} lower cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+echo "    server master${2} lower $1 cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+# echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
+}
+
+add_gamification_node() {
+# echo "    {% for node in gamification %}" >> ${PWD}/haproxy.cfg
+echo "    server master${2} lower $1 cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
 # echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
 }
 
