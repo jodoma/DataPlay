@@ -140,7 +140,8 @@ echo "    cookie DPSession prefix" >> ${PWD}/haproxy.cfg
 
 add_master_node() {
 # echo "    {% for node in gamification %}" >> ${PWD}/haproxy.cfg
-echo "    server master${2} lower $1 cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+#echo "    server master${2} lower $1 cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+echo "    server master${2} $1 cookie master${2} check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
 # echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
 }
 
@@ -183,8 +184,9 @@ else
     for x in $arr
     ## take the last one (for no particular reason)
         do
-		add_gamification_node $x, $counter
+		add_gamification_node $x $counter
                 log "CLOUD_GamificationDownstreamPort > [$x]"
+		counter=$((counter+1))
         done
 fi
 
@@ -384,6 +386,7 @@ case "$1" in
 			;;
 		updateports)
 			update_config_file
+			service haproxy restart
 			;;
 esac
 
