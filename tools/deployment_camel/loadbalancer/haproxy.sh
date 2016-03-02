@@ -169,7 +169,7 @@ else
     for x in $arr
     ## take the last one (for no particular reason)
         do
-		add_master_node $x, $counter
+		add_master_node $x $counter
                 log "CLOUD_MasterDownstreamPort > [$x]"
 		counter=$((counter+1))
         done
