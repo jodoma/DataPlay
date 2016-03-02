@@ -25,9 +25,11 @@ logsetup
 
 verify_variable_set "CONTAINER_IP"
 verify_variable_set "PUBLIC_PublicLoadBalancerPort"
+verify_variable_set "CLOUD_LoadBalancerStatsPort"
 
 verify_variable_notempty "CONTAINER_IP"
 verify_variable_notempty "PUBLIC_PublicLoadBalancerPort"
+verify_variable_notempty "CLOUD_LoadBalancerStatsPort"
 
 CONTAINER_HOST_IP=$CONTAINER_IP
 GO_VERSION="go1.4.3"
