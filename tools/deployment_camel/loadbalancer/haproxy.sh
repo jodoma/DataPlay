@@ -44,6 +44,7 @@ install_haproxy () {
 
 	service rsyslog restart
 	service haproxy restart
+	update-rc.d haproxy disable
 }
 
 setup_haproxy_api () {
