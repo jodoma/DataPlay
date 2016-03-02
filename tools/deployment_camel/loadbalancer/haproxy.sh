@@ -147,7 +147,8 @@ echo "    server master${2} $1 cookie master${2} check # added on {{ node.timest
 
 add_gamification_node() {
 # echo "    {% for node in gamification %}" >> ${PWD}/haproxy.cfg
-echo "    server master${2} lower $1 cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+#echo "    server master${2} lower $1 cookie master${2} upper check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
+echo "    server master${2} $1 cookie master${2} check # added on {{ node.timestamp|date('r') }}" >> ${PWD}/haproxy.cfg
 # echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
 }
 
