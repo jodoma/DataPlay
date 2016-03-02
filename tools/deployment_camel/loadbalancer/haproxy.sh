@@ -172,33 +172,38 @@ setup_JCatascopiaAgent(){
 	rm ./jcatascopia-agent.sh
 }
 
-command -v node >/dev/null 2>&1 || { echo >&2 "Error: Command 'node' not found!"; exit 1; }
+#command -v node >/dev/null 2>&1 || { echo >&2 "Error: Command 'node' not found!"; exit 1; }
 
-command -v npm >/dev/null 2>&1 || { echo >&2 "Error: Command 'npm' not found!"; exit 1; }
+#command -v npm >/dev/null 2>&1 || { echo >&2 "Error: Command 'npm' not found!"; exit 1; }
 
-echo "[$(timestamp)] ---- 1. Setup Host ----"
-setuphost
-
-echo "[$(timestamp)] ---- 2. Install HAProxy ----"
-install_haproxy
-
-echo "[$(timestamp)] ---- 3. Setup HAProxy API ----"
-setup_haproxy_api
-
-echo "[$(timestamp)] ---- 4. Install GO ----"
-install_go
-
-echo "[$(timestamp)] ---- 5. Export Variables ----"
-export_variables
-
-echo "[$(timestamp)] ---- 6. Run API Monitoring Probe ----"
-run_monitoring
-
-echo "[$(timestamp)] ---- 7. Update IPTables rules ----"
-update_iptables
-
-echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
-setup_JCatascopiaAgent
+case "$1" in 
+	        install)
+			echo "[$(timestamp)] ---- 1. Setup Host ----"
+			setuphost
+			echo "[$(timestamp)] ---- 2. Install HAProxy ----"
+			install_haproxy
+			#echo "[$(timestamp)] ---- 3. Setup HAProxy API ----"
+			#setup_haproxy_api
+			;;
+		configure)
+			#echo "[$(timestamp)] ---- 4. Install GO ----"
+			#install_go
+			#echo "[$(timestamp)] ---- 5. Export Variables ----"
+			#export_variables
+			#echo "[$(timestamp)] ---- 6. Run API Monitoring Probe ----"
+			#run_monitoring
+			#echo "[$(timestamp)] ---- 7. Update IPTables rules ----"
+			#update_iptables
+			;;
+		start)
+			;;
+		stop)
+			;;
+		startdetect)
+			;;
+		stopdetect)
+			;;
+esac
 
 echo "[$(timestamp)] ---- Completed ----"
 
