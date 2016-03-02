@@ -140,7 +140,7 @@ echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
 
 print_config_file_footer() {
 echo "" >> ${PWD}/haproxy.cfg
-echo "listen stats *:1936" >> ${PWD}/haproxy.cfg
+echo "listen stats *:${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
 echo "    stats enable" >> ${PWD}/haproxy.cfg
 echo "    stats uri /" >> ${PWD}/haproxy.cfg
 echo "    stats hide-version" >> ${PWD}/haproxy.cfg
@@ -205,6 +205,7 @@ else
 fi
 
 add_gamification_prefix
+counter=0
 if [ -z ${CLOUD_GamificationDownstreamPort} ] ; then 
 	log "no gamification downstream nodes set"
 else 
@@ -212,12 +213,13 @@ else
     for x in $arr
     ## take the last one (for no particular reason)
         do
+		add_gamification_node $x, $counter
                 log "CLOUD_GamificationDownstreamPort > [$x]"
         done
 fi
 
 print_config_file_footer
-
+sudo cp ${PWD}/haproxy.cfg /etc/haproxy/haproxy.cfg
 }
 
 timestamp () {
@@ -243,7 +245,7 @@ install_haproxy () {
 
 	service rsyslog restart
 	service haproxy stop
-	update-rc.d haproxy disable
+	#update-rc.d haproxy disable
 }
 
 setup_haproxy_api () {
@@ -398,9 +400,13 @@ case "$1" in
 			#update_iptables
 			;;
 		start)
-			/usr/sbin/haproxy -f /etc/haproxy/haproxy.cfg  -p /var/run/haproxy.pid
+			service haproxy stop
+			service haproxy start
+			sleep infinity
 			;;
 		stop)
+			service haproxy stop
+			kill -9 1
 			;;
 		startdetect)
 			;;
