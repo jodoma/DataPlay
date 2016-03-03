@@ -4,17 +4,33 @@
 
 set -ex
 
+source $(dirname $0)/../helper.sh
+
 if [ "$(id -u)" != "0" ]; then
-	echo >&2 "Error: This script must be run as user 'root'";
-	exit 1
+        LOGDIR=${PWD}/var/log/dataplay
+        #PROJECTDIR=/opt/dataplay
+else
+        LOGDIR=/var/log/dataplay
+        #PROJECTDIR=/opt/dataplay
 fi
 
+LOCAL_DIR=$(dirname $0)
+
+LOGFILENAME=cassandra.log
+LOGFILE=$LOGDIR/$LOGFILENAME
+
+verify_variable_set "CONTAINER_IP"
+verify_variable_set "CassandraInport"
+verify_variable_notempty "CONTAINER_IP"
+verify_variable_notempty "CassandraInport"
+
 IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
+### we will have to update this if we run inside a container.
 MAX_RETRIES="200"
 TIMEOUT="5"
 
-JCATASCOPIA_REPO="109.231.126.62"
-JCATASCOPIA_DASHBOARD="109.231.122.112"
+#JCATASCOPIA_REPO="109.231.126.62"
+#JCATASCOPIA_DASHBOARD="109.231.122.112"
 
 timestamp () {
 	date +"%F %T,%3N"
@@ -162,52 +178,58 @@ import_data () {
 	rm -rf $SOURCE_DIR
 }
 
-update_iptables () {
-	# iptables -A INPUT -p tcp --dport 7000 -j ACCEPT # Internode communication (not used if TLS enabled) Used internal by Cassandra
-	iptables -A INPUT -p tcp --dport 7199 -j ACCEPT # JMX
-	iptables -A INPUT -p tcp --dport 8888 -j ACCEPT # OpsCenter
-	iptables -A INPUT -p tcp --dport 9042 -j ACCEPT # CQL
-	iptables -A INPUT -p tcp --dport 9160 -j ACCEPT # Thift client API
-
-	iptables-save
-}
+#update_iptables () {
+#	# iptables -A INPUT -p tcp --dport 7000 -j ACCEPT # Internode communication (not used if TLS enabled) Used internal by Cassandra
+#	iptables -A INPUT -p tcp --dport 7199 -j ACCEPT # JMX
+#	iptables -A INPUT -p tcp --dport 8888 -j ACCEPT # OpsCenter
+#	iptables -A INPUT -p tcp --dport 9042 -j ACCEPT # CQL
+#	iptables -A INPUT -p tcp --dport 9160 -j ACCEPT # Thift client API
+#
+#	iptables-save
+#}
 
 #added to automate JCatascopiaAgent installation
-setup_JCatascopiaAgent(){
-	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
+#setup_JCatascopiaAgent(){
+#	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
+#
+#	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
+#
+#	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
+#
+#	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
+#
+#	rm ./jcatascopia-agent.sh
+#}
 
-	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
-
-	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
-
-	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
-
-	rm ./jcatascopia-agent.sh
-}
-
-echo "[$(timestamp)] ---- 1. Setup Host ----"
-setuphost
-
-echo "[$(timestamp)] ---- 2. Install Oracle Java 7 ----"
-install_java
-
-echo "[$(timestamp)] ---- 3. Install Cassandra ----"
-install_cassandra
-
-echo "[$(timestamp)] ---- 4. Configure Cassandra ----"
-configure_cassandra
-
-echo "[$(timestamp)] ---- 5. Export Variables ----"
-export_variables
-
-echo "[$(timestamp)] ---- 6. Import Data ----"
-import_data
-
-echo "[$(timestamp)] ---- 7. Update IPTables rules ----"
-update_iptables
-
-echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
-setup_JCatascopiaAgent
+case "$1" in
+        install)
+		echo "[$(timestamp)] ---- 1. Setup Host ----"
+		setuphost
+		echo "[$(timestamp)] ---- 2. Install Oracle Java 7 ----"
+		install_java
+		echo "[$(timestamp)] ---- 3. Install Cassandra ----"
+		install_cassandra
+		;;
+	configure)
+		echo "[$(timestamp)] ---- 4. Configure Cassandra ----"
+		configure_cassandra
+		#echo "[$(timestamp)] ---- 5. Export Variables ----"
+		#export_variables
+		echo "[$(timestamp)] ---- 6. Import Data ----"
+		import_data
+		#echo "[$(timestamp)] ---- 7. Update IPTables rules ----"
+		#update_iptables
+		#echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
+		#setup_JCatascopiaAgent
+		;;
+	start)
+		restart_cassandra
+		;;
+	stop)
+		service cassandra stop
+		kill 1
+		;;
+esac
 
 echo "[$(timestamp)] ---- Completed ----"
 
