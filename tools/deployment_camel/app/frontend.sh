@@ -24,14 +24,22 @@ DEST="/home/ubuntu/www"
 APP="dataplay"
 WWW="www-src"
 
+verify_variable_set "CONTAINER_IP"
+verify_variable_set "CLOAD_FrontendNodeLogic"
+verify_variable_set "CLOUD_FrontendIncoming"
+verify_variable_notempty "CONTAINER_IP"
+## this is my incoming port ##
+verify_variable_notempty "CLOAD_FrontendNodeLogic"
+
 APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
-APP_PORT="80"
+APP_PORT=$CLOUD_FrontendIncoming
 APP_TYPE="gamification"
 
 # LOADBALANCER_HOST="109.231.121.26"
 # LOADBALANCER_HOST=$(ss-get --timeout 360 loadbalancer.hostname)
 # LOADBALANCER_REQUEST_PORT="80"
 # LOADBALANCER_API_PORT="1937"
+DOMAIN="localhost:$APP_PORT"
 # DOMAIN="dataplay.playgen.com"
 # DOMAIN="${LOADBALANCER_HOST}:${LOADBALANCER_REQUEST_PORT}"
 
@@ -95,15 +103,15 @@ download_app () {
 	SOURCE="$URL/$USER/$REPO"
 
 	cd $DEST
-	echo "Fetching latest ZIP"
-	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/zip/$BRANCH -O $BRANCH.zip
-	echo "Extracting from $BRANCH.zip"
-	unzip -oq $BRANCH.zip
-	if [ -d $APP ]; then
-		rm -r $APP
-	fi
-	mkdir -p $APP
-	echo "Moving files from $REPO-$BRANCH/ to $APP"
+	# echo "Fetching latest ZIP"
+	# wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/zip/$BRANCH -O $BRANCH.zip
+	# echo "Extracting from $BRANCH.zip"
+	# unzip -oq $BRANCH.zip
+	#if [ -d $APP ]; then
+	#	rm -r $APP
+	#fi
+	#mkdir -p $APP
+	echo "Moving files from here to webdir"
 	mv -f $REPO-$BRANCH/* $APP
 	cd $APP
 }
@@ -128,13 +136,13 @@ build_frontend () {
 	grunt build
 }
 
-inform_loadbalancer () {
-	retries=0
-	until curl -H "Content-Type: application/json" -X POST -d "{\"ip\":\"$APP_HOST:$APP_PORT\"}" http://$LOADBALANCER_HOST:$LOADBALANCER_API_PORT/$APP_TYPE; do
-		echo "[$(timestamp)] Load Balancer is not up yet, retry... [$(( retries++ ))]"
-		sleep 5
-	done
-}
+#inform_loadbalancer () {
+#	retries=0
+#	until curl -H "Content-Type: application/json" -X POST -d "{\"ip\":\"$APP_HOST:$APP_PORT\"}" http://$LOADBALANCER_HOST:$LOADBALANCER_API_PORT/$APP_TYPE; do
+#		echo "[$(timestamp)] Load Balancer is not up yet, retry... [$(( retries++ ))]"
+#		sleep 5
+#	done
+#}
 
 setup_service_script () {
 	DEPLOYMENT="tools/deployment"
@@ -146,17 +154,17 @@ setup_service_script () {
 }
 
 #added to automate JCatascopiaAgent installation
-setup_JCatascopiaAgent(){
-	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
-
-	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
-
-	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
-
-	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
-
-	rm ./jcatascopia-agent.sh
-}
+#setup_JCatascopiaAgent(){
+#	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
+#
+#	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
+#
+#	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
+#
+#	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
+#
+#	rm ./jcatascopia-agent.sh
+#}
 
 case "$1" in
 	install)
@@ -184,8 +192,10 @@ case "$1" in
 		setup_service_script
 		;;
 	start)
+		service nginx start
 		;;
 	stop)
+		service nginx stop
 		;;
 	startdetect)
 		;;
