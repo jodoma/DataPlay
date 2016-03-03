@@ -19,6 +19,7 @@ LOCAL_DIR=$(dirname $0)
 LOGFILENAME=frontend.log
 LOGFILE=$LOGDIR/$LOGFILENAME
 
+logsetup
 
 DEST="/home/ubuntu/www"
 APP="dataplay"
