@@ -15,8 +15,8 @@ REPO="DataPlay"
 BRANCH="master"
 SOURCE="$URL/$USER/$REPO/$BRANCH"
 
-JCATASCOPIA_REPO="109.231.126.62"
-JCATASCOPIA_DASHBOARD="109.231.122.112"
+#JCATASCOPIA_REPO="109.231.126.62"
+#JCATASCOPIA_DASHBOARD="109.231.122.112"
 
 timestamp () {
 	date +"%F %T,%3N"
@@ -65,33 +65,33 @@ install_pgpool () {
 	systemctl enable pgpool-II-94
 }
 
-setup_pgpool_api () {
-	command -v pgpool >/dev/null 2>&1 || { echo >&2 'Error: Command "pgpool" not found!'; exit 1; }
-
-	command -v npm >/dev/null 2>&1 || { echo >&2 'Error: Command "npm" not found!'; exit 1; }
-
-	command -v forever >/dev/null 2>&1 || { echo >&2 'Error: "forever" is not installed!'; exit 1; }
-
-	command -v coffee >/dev/null 2>&1 || { echo >&2 'Error: "coffee-script" is not installed!'; exit 1; }
-
-	cd /root && mkdir -p pgpool-api && cd pgpool-api
-
-	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/app.coffee && \
-	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/package.json && \
-	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/cluster.json && \
-	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/pgpool.conf.template
-
-	npm install
-
-	coffee -cb app.coffee > app.js
-
-	forever -a start -l forever.log -o output.log -e errors.log app.js >/dev/null 2>&1
-
-	###
-	# curl -i -H "Accept: application/json" -H "Content-Type: application/json" -X POST -d '{"ip":"109.231.124.33"}' http://109.231.124.33:1937
-	# curl -i -H "Accept: application/json" -X DELETE http://109.231.124.33:1937/109.231.124.33
-	###
-}
+#setup_pgpool_api () {
+#	command -v pgpool >/dev/null 2>&1 || { echo >&2 'Error: Command "pgpool" not found!'; exit 1; }
+#
+#	command -v npm >/dev/null 2>&1 || { echo >&2 'Error: Command "npm" not found!'; exit 1; }
+#
+#	command -v forever >/dev/null 2>&1 || { echo >&2 'Error: "forever" is not installed!'; exit 1; }
+#
+#	command -v coffee >/dev/null 2>&1 || { echo >&2 'Error: "coffee-script" is not installed!'; exit 1; }
+#
+#	cd /root && mkdir -p pgpool-api && cd pgpool-api
+#
+#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/app.coffee && \
+#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/package.json && \
+#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/cluster.json && \
+#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/pgpool.conf.template
+#
+#	npm install
+#
+#	coffee -cb app.coffee > app.js
+#
+#	forever -a start -l forever.log -o output.log -e errors.log app.js >/dev/null 2>&1
+#
+#	###
+#	# curl -i -H "Accept: application/json" -H "Content-Type: application/json" -X POST -d '{"ip":"109.231.124.33"}' http://109.231.124.33:1937
+#	# curl -i -H "Accept: application/json" -X DELETE http://109.231.124.33:1937/109.231.124.33
+#	###
+#}
 
 setup_pgpoolAdmin () {
 	yum install -y httpd
@@ -114,40 +114,61 @@ setup_pgpoolAdmin () {
 	chcon -R -t httpd_sys_content_rw_t /var/log/pgpool.log
 }
 
-update_firewall () {
-	firewall-cmd --permanent --add-port=1937/tcp # pgpool-API
-	firewall-cmd --permanent --add-port=9999/tcp # pgpool
-
-	firewall-cmd --reload
-}
+#update_firewall () {
+#	firewall-cmd --permanent --add-port=1937/tcp # pgpool-API
+#	firewall-cmd --permanent --add-port=9999/tcp # pgpool
+#
+#	firewall-cmd --reload
+#}
 
 #added to automate JCatascopiaAgent installation
-setup_JCatascopiaAgent(){
-	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
+#setup_JCatascopiaAgent(){
+#	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
+#
+#	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
+#
+#	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
+#
+#	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
+#
+#	rm ./jcatascopia-agent.sh
+#}
 
-	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
+case "$1" in
+        install)
+		echo "[$(timestamp)] ---- 1. Setup Host ----"
+		setuphost
+		echo "[$(timestamp)] ---- 2. Install pgpool-II ----"
+		install_pgpool
+		## what is probably missing is that the 
+		## inital set of downstream dbs is configured
+		## (cf updateports)
+		;;
+	configure)
+		;;
+	start)
+		;;
+	stop)
+		;;
+	      startdetect)
+                ;;
+        stopdetect)
+                ;;
+        updateports)
+		## FIXME: this is missing 
+		## the logic for that is part of
+		## api/app.coffee and the template file in the same directory
+                ;;
+esac
 
-	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
+#echo "[$(timestamp)] ---- 3. Setup pgpool API ----"
+#setup_pgpool_api
 
-	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
+#echo "[$(timestamp)] ---- 4. Update Firewall rules ----"
+#update_firewall
 
-	rm ./jcatascopia-agent.sh
-}
-
-echo "[$(timestamp)] ---- 1. Setup Host ----"
-setuphost
-
-echo "[$(timestamp)] ---- 2. Install pgpool-II ----"
-install_pgpool
-
-echo "[$(timestamp)] ---- 3. Setup pgpool API ----"
-setup_pgpool_api
-
-echo "[$(timestamp)] ---- 4. Update Firewall rules ----"
-update_firewall
-
-echo "[$(timestamp)] ---- 5. Setting up JCatascopia Agent ----"
-setup_JCatascopiaAgent
+#echo "[$(timestamp)] ---- 5. Setting up JCatascopia Agent ----"
+#setup_JCatascopiaAgent
 
 echo "[$(timestamp)] ---- Completed ----"
 
