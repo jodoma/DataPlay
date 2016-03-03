@@ -32,6 +32,11 @@ GO_VERSION="go1.4.3"
 DEST="/home/ubuntu/www"
 APP="dataplay"
 
+export GOROOT=/home/ubuntu/go 
+export PATH="$PATH:\$GOROOT/bin"
+
+export GOPATH=/home/ubuntu/gocode
+export PATH="PATH:GOPATH/bin"
 #APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
 #APP_PORT="3000"
 #APP_TYPE="master"
@@ -129,34 +134,48 @@ kill_master_servers() {
 	fi
 }
 
-run_master_server () {
-	URL="https://codeload.github.com"
-	USER="playgenhub"
-	REPO="DataPlay"
-	BRANCH="master"
-	SOURCE="$URL/$USER/$REPO"
-
-	START="start.sh"
-	LOG="output.log"
-
-
-	cd $DEST
-	echo "Fetching latest ZIP"
-	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/zip/$BRANCH -O $BRANCH.zip
-	echo "Extracting from $BRANCH.zip"
-	unzip -oq $BRANCH.zip
-	if [ -d $APP ]; then
-		rm -r $APP
+start_master_server() {
+	echo 'BUILDING GOGRAM'
+	oldgo=$GOPATH
+	if [[ "$OSTYPE" == "msys" ]]; then
+	        GOPATH=$oldgo";"$(pwd -W)
+	else
+	        GOPATH=$oldgo:$(pwd)
 	fi
-	mkdir -p $APP
-	echo "Moving files from $REPO-$BRANCH/ to $APP"
-	mv -f $REPO-$BRANCH/* $APP
-	cd $APP
-	chmod u+x $START
-	echo "Starting $APP_TYPE"
-	nohup sh $START > $LOG 2>&1&
+	export GOPATH
+	project=dataplay
+	nohub $DEST/$APP/bin/$project > $LOG 2>&1&
 	echo "Done! $ sudo tail -f $DEST/$APP/$LOG for more details"
 }
+
+#run_master_server () {
+#	URL="https://codeload.github.com"
+#	USER="playgenhub"
+#	REPO="DataPlay"
+#	BRANCH="master"
+#	SOURCE="$URL/$USER/$REPO"
+#
+#	START="start.sh"
+#	LOG="output.log"
+#
+
+#	cd $DEST
+#	echo "Fetching latest ZIP"
+#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/zip/$BRANCH -O $BRANCH.zip
+#	echo "Extracting from $BRANCH.zip"
+#	unzip -oq $BRANCH.zip
+#	if [ -d $APP ]; then
+#		rm -r $APP
+#	fi
+#	mkdir -p $APP
+#	echo "Moving files from $REPO-$BRANCH/ to $APP"
+#	mv -f $REPO-$BRANCH/* $APP
+#	cd $APP
+#	chmod u+x $START
+#	echo "Starting $APP_TYPE"
+#	nohup sh $START > $LOG 2>&1&
+#	echo "Done! $ sudo tail -f $DEST/$APP/$LOG for more details"
+#}
 
 #inform_loadbalancer () {
 #	retries=0
@@ -178,7 +197,7 @@ setup_service_script () {
 	DEPLOYMENT="tools/deployment"
 	SERVICE="master.service.sh"
 
-	cp $DEST/$APP/$DEPLOYMENT/app/$SERVICE $DEST/$SERVICE
+	cp ${LOCAL_DIR}/../../deployment/app/$SERVICE $DEST/$SERVICE
 
 	chmod +x $DEST/$SERVICE
 }
@@ -208,11 +227,11 @@ case "$1" in
 		install_go
 		# echo "[$(timestamp)] ---- 3. Export Variables ----"
 		#export_variables
+		install_master_server
 		;;
 	configure)
 		echo "[$(timestamp)] ---- 4. Run API (Master) Server ----"
 		kill_master_servers
-		init_master_server	
 	;;
 	start)
 		kill_master_servers
@@ -231,6 +250,7 @@ case "$1" in
 		;;
 		# echo "[$(timestamp)] ---- 6. Update IPTables rules ----"
 		# update_iptables
+esac
 
 echo "[$(timestamp)] ---- 7. Setup Service Script ----"
 setup_service_script
