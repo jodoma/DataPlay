@@ -104,7 +104,7 @@ download_app () {
 	
 	rm -rf $DEST/$APP
 	mkdir -p $DEST/$APP
-	cp -r $LOCAL_DIR/../../www-src $DEST/$APP
+	cp -r $LOCAL_DIR/../../../www-src $DEST/$APP
 
 	# cd $DEST
 	# echo "Fetching latest ZIP"
@@ -152,7 +152,7 @@ setup_service_script () {
 	DEPLOYMENT="tools/deployment"
 	SERVICE="frontend.service.sh"
 
-	cp $DEST/$APP/$DEPLOYMENT/app/$SERVICE $DEST/$SERVICE
+	cp $LOCAL_DIR/$SERVICE $DEST/$SERVICE
 
 	chmod +x $DEST/$SERVICE
 }
