@@ -26,20 +26,21 @@ WWW="www-src"
 
 verify_variable_set "CONTAINER_IP"
 verify_variable_set "CLOAD_FrontendNodeLogic"
-verify_variable_set "CLOUD_FrontendIncoming"
+verify_variable_set "PUBLIC_FrontendIncoming"
 verify_variable_notempty "CONTAINER_IP"
 ## this is my incoming port ##
-verify_variable_notempty "CLOAD_FrontendNodeLogic"
+verify_variable_notempty "PUBLIC_FrontendNodeLogic"
 
-APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
-APP_PORT=$CLOUD_FrontendIncoming
-APP_TYPE="gamification"
+#APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
+#APP_PORT=$CLOUD_FrontendIncoming
+#APP_TYPE="gamification"
 
 # LOADBALANCER_HOST="109.231.121.26"
 # LOADBALANCER_HOST=$(ss-get --timeout 360 loadbalancer.hostname)
 # LOADBALANCER_REQUEST_PORT="80"
 # LOADBALANCER_API_PORT="1937"
-DOMAIN="localhost:$APP_PORT"
+DOMAIN=$PUBLIC_FrontendNodeLogic
+# "localhost:$APP_PORT"
 # DOMAIN="dataplay.playgen.com"
 # DOMAIN="${LOADBALANCER_HOST}:${LOADBALANCER_REQUEST_PORT}"
 
@@ -186,12 +187,12 @@ case "$1" in
 	configure)
 		echo "[$(timestamp)] ---- 5. Init Frotnend ----"
 		init_frontend
-		# echo "[$(timestamp)] ---- 6. Configure Frotnend ----"
-		# configure_frontend
-		# echo "[$(timestamp)] ---- 7. Build Frontend ----"
-		# su ubuntu -c "$(typeset -f build_frontend); build_frontend" # Run function as user 'ubuntu'
-		# echo "[$(timestamp)] ---- 6. Inform Load Balancer (Add) ----"
-		# inform_loadbalancer
+		## echo "[$(timestamp)] ---- 6. Configure Frotnend ----"
+		## configure_frontend
+		## echo "[$(timestamp)] ---- 7. Build Frontend ----"
+		## su ubuntu -c "$(typeset -f build_frontend); build_frontend" # Run function as user 'ubuntu'
+		## echo "[$(timestamp)] ---- 6. Inform Load Balancer (Add) ----"
+		## inform_loadbalancer
 		echo "[$(timestamp)] ---- 7. Setup Service Script ----"
 		setup_service_script
 		;;
@@ -206,6 +207,9 @@ case "$1" in
 	stopdetect)
 		;;
 	updateports)
+		init_frontend
+		configure_frontend
+		service nginx restart
 		;;
 esac
 
