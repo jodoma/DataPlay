@@ -78,7 +78,7 @@ install_nginx () {
 
 	apt-add-repository -y ppa:nginx/stable
 	apt-get update
-	apt-get install -y nginx-full
+	apt-get install -y nginx-full unzip
 
 	unixts="$(date +'%Y%m%d%H%M%S')"
 	keyword="<filesystem>"
@@ -86,10 +86,10 @@ install_nginx () {
 
 	cp /etc/nginx/sites-available/default /etc/nginx/sites-available/default.$unixts
 	#wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/app/nginx.default -O /etc/nginx/sites-available/default
-	cp $LOCAL_DIR/nginx.default -O /etc/nginx/sites-available/default
+	cp $LOCAL_DIR/nginx.default /etc/nginx/sites-available/default
 	sed -i 's,'"$keyword"','"$destination"',g' /etc/nginx/sites-available/default
 
-	chown ubuntu:www-data $DEST/$APP/$WWW
+	chown -R www-data:www-data $DEST
 
 	service nginx stop
 	update-rc.d nginx disable
@@ -101,19 +101,23 @@ download_app () {
 	REPO="DataPlay"
 	BRANCH="master"
 	SOURCE="$URL/$USER/$REPO"
+	
+	rm -rf $DEST/$APP
+	mkdir -p $DEST/$APP
+	cp -r $LOCAL_DIR/../../www-src $DEST/$APP
 
-	cd $DEST
+	# cd $DEST
 	# echo "Fetching latest ZIP"
 	# wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/zip/$BRANCH -O $BRANCH.zip
 	# echo "Extracting from $BRANCH.zip"
 	# unzip -oq $BRANCH.zip
-	#if [ -d $APP ]; then
+	# if [ -d $APP ]; then
 	#	rm -r $APP
-	#fi
-	#mkdir -p $APP
-	echo "Moving files from here to webdir"
-	mv -f $REPO-$BRANCH/* $APP
-	cd $APP
+	# fi
+	# mkdir -p $APP
+	# echo "Moving files from here to webdir"
+ 	# mv -f $REPO-$BRANCH/* $APP
+	# cd $APP
 }
 
 init_frontend () {
@@ -203,7 +207,7 @@ case "$1" in
 		;;
 	updateports)
 		;;
-
+esac
 
 echo "[$(timestamp)] ---- Completed ----"
 
