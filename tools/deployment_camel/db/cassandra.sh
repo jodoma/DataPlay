@@ -24,7 +24,13 @@ verify_variable_set "CassandraInport"
 verify_variable_notempty "CONTAINER_IP"
 verify_variable_notempty "CassandraInport"
 
-IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+export CASSANDRA_CONFIG=/etc/cassandra
+
+## probably setting this to CLOUD_IP is wiser?
+IP=$CONTAINER_IP
+
+#IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
 ### we will have to update this if we run inside a container.
 MAX_RETRIES="200"
 TIMEOUT="5"
@@ -43,13 +49,14 @@ setuphost () {
 }
 
 install_java () {
-	echo oracle-java7-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+
+	### FIXME: install Java 8
+	echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
 	apt-add-repository -y ppa:webupd8team/java && \
 	apt-get update && \
-	apt-get install -y axel oracle-java7-installer && \
+	apt-get install -y axel oracle-java8-installer && \
 	apt-get autoclean
 
-	echo "export JAVA_HOME=/usr/lib/jvm/java-7-oracle" >> /etc/profile.d/dataplay.sh
 
 	. /etc/profile
 }
@@ -79,9 +86,12 @@ install_cassandra () {
 	apt-get update && \
 	apt-get install -y cassandra
 
+	 sed -i -e 's/ulimit/#ulimit/g' /etc/init.d/cassandra
 	echo "export CASSANDRA_CONFIG=/etc/cassandra" >> /etc/profile.d/dataplay.sh
+	service cassandra stop
+	update-rc.d cassandra disable
 
-	. /etc/profile
+	# . /etc/profile
 }
 
 configure_cassandra () {
@@ -153,6 +163,7 @@ import_data () {
 		j=$[$j+1]
 	done
 
+	restart_cassandra
 	check_cassandra
 
 	cqlsh $IP -f $BACKUP_SCHEMA_FILE
@@ -171,7 +182,7 @@ import_data () {
 
 	rm -rf $LOG_DIR/*.log
 
-	restart_cassandra
+	# restart_cassandra
 
 	# nodetool -h $IP repair $KEYSPACE
 
@@ -224,6 +235,8 @@ case "$1" in
 		;;
 	start)
 		restart_cassandra
+		#exec sleep infinity
+		sleep infinity
 		;;
 	stop)
 		service cassandra stop
