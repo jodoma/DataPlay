@@ -38,3 +38,19 @@ if [ -z ${!NAME} ] ; then
  exit 4
 fi
 }
+
+function get_any_element_from_list() {
+ 
+ local var=$(echo \$$1)
+ eval var=$var
+ local arr=$(echo $var | tr "," "\n")
+ for x in $arr
+  ## take the last one (for no particular reason)
+  do
+   echo $x
+   return 0
+  done
+
+  return -1
+}
+
