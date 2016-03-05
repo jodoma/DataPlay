@@ -147,10 +147,10 @@ import_data () {
 		BACKUP_DIR="cassandra/$LASTDATE"
 		echo "Latest $BACKUP_SCHEMA_FILE backup not available, trying $LASTDATE"
 		i=$[$i+1]
+		if [[ $i -ge $MAX_RETRIES ]]; then
+			echo >&2 "Error: Unable to fetch '$BACKUP_SCHEMA_FILE' from backup server."; exit 1;
+		fi
 	done
-	if [[ $i -ge $MAX_RETRIES ]]; then
-		echo >&2 "Error: Unable to fetch '$BACKUP_SCHEMA_FILE' from backup server."; exit 1;
-	fi
 
 	j="1"
 	until [[ $j -lt $MAX_RETRIES ]] && axel -a "http://$BACKUP_USER:$BACKUP_PASS@$BACKUP_HOST:$BACKUP_PORT/$BACKUP_DIR/$BACKUP_DATA_FILE"; do
@@ -158,10 +158,10 @@ import_data () {
 		BACKUP_DIR="cassandra/$LASTDATE"
 		echo "Latest $BACKUP_DATA_FILE backup not available, trying $LASTDATE"
 		j=$[$j+1]
+		if [[ $j -ge $MAX_RETRIES ]]; then
+			echo >&2 "Error: Unable to fetch '$BACKUP_DATA_FILE' from backup server."; exit 1;
+		fi
 	done
-	if [[ $j -ge $MAX_RETRIES ]]; then
-		echo >&2 "Error: Unable to fetch '$BACKUP_DATA_FILE' from backup server."; exit 1;
-	fi
 
 	restart_cassandra
 	check_cassandra
