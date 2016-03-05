@@ -11,7 +11,6 @@ fi
 
 APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
 
-
 ### this information should not be needed
 #PGPOOL_API_HOST="109.231.124.33"
 #PGPOOL_API_HOST=$(ss-get --timeout 360 pgpool.hostname)
@@ -51,8 +50,8 @@ setup_database () {
 	createdb -O $DB_USER $DB_NAME
 
 	# Adjust PostgreSQL configuration so that remote connections to the database are possible.
-	# From Flexiant clusters & PlayGen dev IP
-	echo "host    all             all             134.60.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	# From private network and omistack public network
+	echo "host    all             all             192.168.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	echo "host    all             all             134.60.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	##### FIXME: do we have to put the load balancer address somewhere here?
 
