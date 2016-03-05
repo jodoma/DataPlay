@@ -99,7 +99,7 @@ install_cassandra () {
 	update-rc.d cassandra disable
 
 	# . /etc/profile
-	mkidr $DATA_DIR/$KEYSPACE/$
+	mkdir -p $DATA_DIR/$KEYSPACE/
 	chown -R cassandra:cassandra $DATA_DIR/$KEYSPACE # Fix permissions
 }
 
@@ -230,7 +230,7 @@ case "$1" in
 		#echo "[$(timestamp)] ---- 5. Export Variables ----"
 		#export_variables
 		echo "[$(timestamp)] ---- 6. Import Data ----"
-		import_data
+		# import_data
 		#echo "[$(timestamp)] ---- 7. Update IPTables rules ----"
 		#update_iptables
 		#echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
