@@ -27,6 +27,13 @@ verify_variable_notempty "CassandraInport"
 export JAVA_HOME=/usr/lib/jvm/java-8-oracle
 export CASSANDRA_CONFIG=/etc/cassandra
 
+
+CASSANDRA_DIR="/var/lib/cassandra"
+DATA_DIR="$CASSANDRA_DIR/data"
+LOG_DIR="$CASSANDRA_DIR/commitlog"
+SOURCE_DIR="/tmp/cassandra-data"
+KEYSPACE="dataplay"
+
 ## probably setting this to CLOUD_IP is wiser?
 IP=$CONTAINER_IP
 
@@ -92,6 +99,8 @@ install_cassandra () {
 	update-rc.d cassandra disable
 
 	# . /etc/profile
+	mkidr $DATA_DIR/$KEYSPACE/$
+	chown -R cassandra:cassandra $DATA_DIR/$KEYSPACE # Fix permissions
 }
 
 configure_cassandra () {
@@ -132,14 +141,8 @@ import_data () {
 	BACKUP_USER="playgen"
 	BACKUP_PASS="D@taP1aY"
 
-	KEYSPACE="dataplay"
 	BACKUP_SCHEMA_FILE="$KEYSPACE-schema.cql"
 	BACKUP_DATA_FILE="$KEYSPACE-data.tar.gz"
-
-	CASSANDRA_DIR="/var/lib/cassandra"
-	DATA_DIR="$CASSANDRA_DIR/data"
-	LOG_DIR="$CASSANDRA_DIR/commitlog"
-	SOURCE_DIR="/tmp/cassandra-data"
 
 	i="1"
 	until [[ $i -lt $MAX_RETRIES ]] && axel -a "http://$BACKUP_USER:$BACKUP_PASS@$BACKUP_HOST:$BACKUP_PORT/$BACKUP_DIR/$BACKUP_SCHEMA_FILE"; do
