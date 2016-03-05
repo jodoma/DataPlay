@@ -54,3 +54,11 @@ function get_any_element_from_list() {
   return -1
 }
 
+function get_port_from_address() {
+ error "not implemented"
+}
+
+function get_host_from_address() {
+ error "not implemented"
+}
+
