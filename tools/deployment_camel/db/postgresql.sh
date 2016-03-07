@@ -42,8 +42,12 @@ setup_database () {
 	echo "host    all             all             192.168.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	echo "host    all             all             134.60.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	
-	# And add 'listen_addresses' to '/etc/postgresql/$DB_VERSION/main/postgresql.conf'
-	echo "listen_addresses='*'" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
+	# add IP and Port to listen on
+	verify_variable_set "PUBLIC_PsqlIncoming"
+	ip="0.0.0.0"
+	port=${PUBLIC_PsqlIncoming}
+	echo "listen_addresses='${ip}'" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
+	echo "port=${port}" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
 }
 
 import_data () {
@@ -137,8 +141,12 @@ case "$1" in
 		su postgres -c "$(typeset -f import_data); import_data" # Run function as user 'postgres'
 		;;
 	start)
+		service postgresql stop
+		service postgresql start
+		sleep infinity
 		;;
 	stop)
+		service postgresql stop
 		;;
 	startdetect)
                 ;;

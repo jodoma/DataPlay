@@ -4,6 +4,8 @@
 
 set -ex
 
+source $(dirname $0)/../helper.sh
+
 if [ "$(id -u)" != "0" ]; then
 	echo >&2 "Error: This script must be run as user 'root'";
 	exit 1
@@ -29,23 +31,28 @@ setup_pgpool () {
 	DB_PASSWORD="aDam3ntiUm"
 	DB_VERSION="9.4"
 
+	verify_variable_set "PUBLIC_PgPoolIncoming"
+	verify_variable_notempty "PUBLIC_PgPoolIncoming"
+
 	# INJECT PASSWORD
 	pg_md5 -m -f /etc/pgpool2/pgpool.conf-u $DB_USER $DB_PASSWORD
 	chmod 660 /etc/pgpool2/pool_passwd
 	chgrp postgres /etc/pgpool2/pool_passwd
 
 	# create config file, with postgres instances
-	verify_variable_set "CLOUD_PostgresInstancesPort"
+	verify_variable_set "CLOUD_PgPoolDownstream"
 	config_nodes=""
 	counter=0
-	if [ -z ${CLOUD_PostgresInstancesPort} ] ; then 
+	if [ -z ${CLOUD_PgPoolDownstream} ] ; then 
 		echo "no postgres instances available"
 	else 
-	    arr=$(echo $CLOUD_PostgresInstancesPort | tr "," "\n")
+	    arr=$(echo $CLOUD_PgPoolDownstream | tr "," "\n")
 	    for x in $arr; do
+			ip=${x%:*}
+			port=${x#*:}
 			config_nodes=$config_nodes"
-				backend_hostname${counter} = '${x}'
-				backend_port${counter} = 5432
+				backend_hostname${counter} = '${ip}'
+				backend_port${counter} = ${port}
 				backend_weight${counter} = 1
 				backend_data_directory${counter} = '/var/lib/postgresql/9.4/main/'
 				backend_flag${counter} = 'ALLOW_TO_FAILOVER'"
@@ -54,6 +61,10 @@ setup_pgpool () {
 	fi
 	cat pgpool.conf > /etc/pgpool2/pgpool.conf
 	echo $config_nodes >> /etc/pgpool2/pgpool.conf
+	
+	# set port
+	echo "port = ${PUBLIC_PgPoolIncoming}" >> /etc/pgpool2/pgpool.conf	
+	
 }
 
 
@@ -67,12 +78,16 @@ case "$1" in
 	configure)
 		echo "[$(timestamp)] ---- 3. Setup pgpool-II ----"
 		setup_pgpool
-		echo "[$(timestamp)] ---- 4. Restart pgpool-II ----"
-		service pgpool2 restart
+		#echo "[$(timestamp)] ---- 4. Restart pgpool-II ----"
+		#service pgpool2 restart
 		;;
 	start)
+		service pgpool2 stop
+		service pgpool2 start
+		sleep infinity
 		;;
 	stop)
+		service pgpool2 stop
 		;;
 	startdetect)
                 ;;
@@ -80,6 +95,7 @@ case "$1" in
                 ;;
         updateports)
                 ;;
+		setup_pgpool
 esac
 
 echo "[$(timestamp)] ---- Completed ----"
