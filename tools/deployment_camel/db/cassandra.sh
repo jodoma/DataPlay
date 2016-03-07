@@ -24,7 +24,20 @@ verify_variable_set "CassandraInport"
 verify_variable_notempty "CONTAINER_IP"
 verify_variable_notempty "CassandraInport"
 
-IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
+export JAVA_HOME=/usr/lib/jvm/java-8-oracle
+export CASSANDRA_CONFIG=/etc/cassandra
+
+
+CASSANDRA_DIR="/var/lib/cassandra"
+DATA_DIR="$CASSANDRA_DIR/data"
+LOG_DIR="$CASSANDRA_DIR/commitlog"
+SOURCE_DIR="/tmp/cassandra-data"
+KEYSPACE="dataplay"
+
+## probably setting this to CLOUD_IP is wiser?
+IP=$CONTAINER_IP
+
+#IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
 ### we will have to update this if we run inside a container.
 MAX_RETRIES="200"
 TIMEOUT="5"
@@ -43,13 +56,14 @@ setuphost () {
 }
 
 install_java () {
-	echo oracle-java7-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
+
+	### FIXME: install Java 8
+	echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
 	apt-add-repository -y ppa:webupd8team/java && \
 	apt-get update && \
-	apt-get install -y axel oracle-java7-installer && \
+	apt-get install -y axel oracle-java8-installer && \
 	apt-get autoclean
 
-	echo "export JAVA_HOME=/usr/lib/jvm/java-7-oracle" >> /etc/profile.d/dataplay.sh
 
 	. /etc/profile
 }
@@ -79,9 +93,14 @@ install_cassandra () {
 	apt-get update && \
 	apt-get install -y cassandra
 
+	 sed -i -e 's/ulimit/#ulimit/g' /etc/init.d/cassandra
 	echo "export CASSANDRA_CONFIG=/etc/cassandra" >> /etc/profile.d/dataplay.sh
+	service cassandra stop
+	update-rc.d cassandra disable
 
-	. /etc/profile
+	# . /etc/profile
+	mkdir -p $DATA_DIR/$KEYSPACE/
+	chown -R cassandra:cassandra $DATA_DIR/$KEYSPACE # Fix permissions
 }
 
 configure_cassandra () {
@@ -122,37 +141,32 @@ import_data () {
 	BACKUP_USER="playgen"
 	BACKUP_PASS="D@taP1aY"
 
-	KEYSPACE="dataplay"
 	BACKUP_SCHEMA_FILE="$KEYSPACE-schema.cql"
 	BACKUP_DATA_FILE="$KEYSPACE-data.tar.gz"
 
-	CASSANDRA_DIR="/var/lib/cassandra"
-	DATA_DIR="$CASSANDRA_DIR/data"
-	LOG_DIR="$CASSANDRA_DIR/commitlog"
-	SOURCE_DIR="/tmp/cassandra-data"
-
 	i="1"
-	if [[ $i -ge $MAX_RETRIES ]]; then
-		echo >&2 "Error: Unable to fetch '$BACKUP_SCHEMA_FILE' from backup server."; exit 1;
-	fi
 	until [[ $i -lt $MAX_RETRIES ]] && axel -a "http://$BACKUP_USER:$BACKUP_PASS@$BACKUP_HOST:$BACKUP_PORT/$BACKUP_DIR/$BACKUP_SCHEMA_FILE"; do
 		LASTDATE=$(date +%Y-%m-%d --date="$LASTDATE -1 days") # Decrement by 1 Day
 		BACKUP_DIR="cassandra/$LASTDATE"
 		echo "Latest $BACKUP_SCHEMA_FILE backup not available, trying $LASTDATE"
 		i=$[$i+1]
+		if [[ $i -ge $MAX_RETRIES ]]; then
+			echo >&2 "Error: Unable to fetch '$BACKUP_SCHEMA_FILE' from backup server."; exit 1;
+		fi
 	done
 
 	j="1"
-	if [[ $j -ge $MAX_RETRIES ]]; then
-		echo >&2 "Error: Unable to fetch '$BACKUP_DATA_FILE' from backup server."; exit 1;
-	fi
 	until [[ $j -lt $MAX_RETRIES ]] && axel -a "http://$BACKUP_USER:$BACKUP_PASS@$BACKUP_HOST:$BACKUP_PORT/$BACKUP_DIR/$BACKUP_DATA_FILE"; do
 		LASTDATE=$(date +%Y-%m-%d --date="$LASTDATE -1 days") # Decrement by 1 Day
 		BACKUP_DIR="cassandra/$LASTDATE"
 		echo "Latest $BACKUP_DATA_FILE backup not available, trying $LASTDATE"
 		j=$[$j+1]
+		if [[ $j -ge $MAX_RETRIES ]]; then
+			echo >&2 "Error: Unable to fetch '$BACKUP_DATA_FILE' from backup server."; exit 1;
+		fi
 	done
 
+	restart_cassandra
 	check_cassandra
 
 	cqlsh $IP -f $BACKUP_SCHEMA_FILE
@@ -171,7 +185,7 @@ import_data () {
 
 	rm -rf $LOG_DIR/*.log
 
-	restart_cassandra
+	# restart_cassandra
 
 	# nodetool -h $IP repair $KEYSPACE
 
@@ -216,7 +230,7 @@ case "$1" in
 		#echo "[$(timestamp)] ---- 5. Export Variables ----"
 		#export_variables
 		echo "[$(timestamp)] ---- 6. Import Data ----"
-		import_data
+		# import_data
 		#echo "[$(timestamp)] ---- 7. Update IPTables rules ----"
 		#update_iptables
 		#echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
@@ -224,6 +238,8 @@ case "$1" in
 		;;
 	start)
 		restart_cassandra
+		#exec sleep infinity
+		sleep infinity
 		;;
 	stop)
 		service cassandra stop
