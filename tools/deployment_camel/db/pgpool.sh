@@ -9,15 +9,6 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
-URL="https://raw.githubusercontent.com"
-USER="playgenhub"
-REPO="DataPlay"
-BRANCH="master"
-SOURCE="$URL/$USER/$REPO/$BRANCH"
-
-#JCATASCOPIA_REPO="109.231.126.62"
-#JCATASCOPIA_DASHBOARD="109.231.122.112"
-
 timestamp () {
 	date +"%F %T,%3N"
 }
@@ -29,110 +20,42 @@ setuphost () {
 }
 
 install_pgpool () {
+	apt-get update
+	apt-get install -y pgpool2	
+}
+
+setup_pgpool () {
 	DB_USER="playgen"
 	DB_PASSWORD="aDam3ntiUm"
+	DB_VERSION="9.4"
 
-	yum install -y epel-release http://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/pgdg-centos94-9.4-1.noarch.rpm
-	yum install -y http://www.pgpool.net/yum/rpms/3.4/redhat/rhel-7-x86_64/pgpool-II-release-3.4-1.noarch.rpm
+	# INJECT PASSWORD
+	pg_md5 -m -f /etc/pgpool2/pgpool.conf-u $DB_USER $DB_PASSWORD
+	chmod 660 /etc/pgpool2/pool_passwd
+	chgrp postgres /etc/pgpool2/pool_passwd
 
-	# yum update -y
-
-	yum install -y pgpool-II-94 pgpool-II-94-extensions postgresql94
-
-	sed -i 's/^#$ModLoad imudp/$ModLoad imudp/g' /etc/rsyslog.conf
-	sed -i 's/^#$UDPServerRun 514/$UDPServerRun 514/g' /etc/rsyslog.conf
-	sed -i 's/^#$ModLoad imtcp/$ModLoad imtcp/g' /etc/rsyslog.conf
-	sed -i 's/^#$InputTCPServerRun 514/$InputTCPServerRun 514/g' /etc/rsyslog.conf
-	echo "local0.*                                                /var/log/pgpool.log" >> /etc/rsyslog.conf
-
-	systemctl restart rsyslog.service
-	systemctl enable rsyslog.service
-
-	/usr/pgsql-9.4/bin/postgresql94-setup initdb
-
-	systemctl restart postgresql-9.4
-	systemctl enable postgresql-9.4
-
-	cp /etc/pgpool-II-94/pcp.conf.sample /etc/pgpool-II-94/pcp.conf
-	echo "$DB_USER:`pg_md5 $DB_PASSWORD`" >> /etc/pgpool-II-94/pcp.conf
-
-	cp /etc/pgpool-II-94/pool_hba.conf.sample /etc/pgpool-II-94/pool_hba.conf
-	echo "host    all         all         0.0.0.0/0             md5" >> /etc/pgpool-II-94/pool_hba.conf
-
-	pg_md5 -m -u $DB_USER $DB_PASSWORD # Generate pool_passwd
-
-	systemctl restart pgpool-II-94
-	systemctl enable pgpool-II-94
+	# create config file, with postgres instances
+	verify_variable_set "CLOUD_PostgresInstancesPort"
+	config_nodes=""
+	counter=0
+	if [ -z ${CLOUD_PostgresInstancesPort} ] ; then 
+		echo "no postgres instances available"
+	else 
+	    arr=$(echo $CLOUD_PostgresInstancesPort | tr "," "\n")
+	    for x in $arr; do
+			config_nodes=$config_nodes"
+				backend_hostname${counter} = '${x}'
+				backend_port${counter} = 5432
+				backend_weight${counter} = 1
+				backend_data_directory${counter} = '/var/lib/postgresql/9.4/main/'
+				backend_flag${counter} = 'ALLOW_TO_FAILOVER'"
+			counter=$((counter+1))
+		done
+	fi
+	cat pgpool.conf > /etc/pgpool2/pgpool.conf
+	echo $config_nodes >> /etc/pgpool2/pgpool.conf
 }
 
-#setup_pgpool_api () {
-#	command -v pgpool >/dev/null 2>&1 || { echo >&2 'Error: Command "pgpool" not found!'; exit 1; }
-#
-#	command -v npm >/dev/null 2>&1 || { echo >&2 'Error: Command "npm" not found!'; exit 1; }
-#
-#	command -v forever >/dev/null 2>&1 || { echo >&2 'Error: "forever" is not installed!'; exit 1; }
-#
-#	command -v coffee >/dev/null 2>&1 || { echo >&2 'Error: "coffee-script" is not installed!'; exit 1; }
-#
-#	cd /root && mkdir -p pgpool-api && cd pgpool-api
-#
-#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/app.coffee && \
-#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/package.json && \
-#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/cluster.json && \
-#	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N $SOURCE/tools/deployment/db/api/pgpool.conf.template
-#
-#	npm install
-#
-#	coffee -cb app.coffee > app.js
-#
-#	forever -a start -l forever.log -o output.log -e errors.log app.js >/dev/null 2>&1
-#
-#	###
-#	# curl -i -H "Accept: application/json" -H "Content-Type: application/json" -X POST -d '{"ip":"109.231.124.33"}' http://109.231.124.33:1937
-#	# curl -i -H "Accept: application/json" -X DELETE http://109.231.124.33:1937/109.231.124.33
-#	###
-#}
-
-setup_pgpoolAdmin () {
-	yum install -y httpd
-
-	systemctl start httpd.service
-	systemctl enable httpd.service
-
-	yum install -y php php-fpm
-
-	systemctl restart httpd.service
-
-	yum install -y pgpoolAdmin
-
-	chown -R root:root /var/www/html/pgpoolAdmin/
-
-	chcon -R -t httpd_sys_content_rw_t /var/www/html/pgpoolAdmin/templates_c
-	chcon -R -t httpd_sys_content_rw_t /var/www/html/pgpoolAdmin/conf/pgmgt.conf.php
-	chcon -R -t httpd_sys_content_rw_t /etc/pgpool-II-94/pgpool.conf
-	chcon -R -t httpd_sys_content_rw_t /etc/pgpool-II-94/pcp.conf
-	chcon -R -t httpd_sys_content_rw_t /var/log/pgpool.log
-}
-
-#update_firewall () {
-#	firewall-cmd --permanent --add-port=1937/tcp # pgpool-API
-#	firewall-cmd --permanent --add-port=9999/tcp # pgpool
-#
-#	firewall-cmd --reload
-#}
-
-#added to automate JCatascopiaAgent installation
-#setup_JCatascopiaAgent(){
-#	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
-#
-#	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
-#
-#	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
-#
-#	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
-#
-#	rm ./jcatascopia-agent.sh
-#}
 
 case "$1" in
         install)
@@ -140,35 +63,24 @@ case "$1" in
 		setuphost
 		echo "[$(timestamp)] ---- 2. Install pgpool-II ----"
 		install_pgpool
-		## what is probably missing is that the 
-		## inital set of downstream dbs is configured
-		## (cf updateports)
 		;;
 	configure)
+		echo "[$(timestamp)] ---- 3. Setup pgpool-II ----"
+		setup_pgpool
+		echo "[$(timestamp)] ---- 4. Restart pgpool-II ----"
+		service pgpool2 restart
 		;;
 	start)
 		;;
 	stop)
 		;;
-	      startdetect)
+	startdetect)
                 ;;
         stopdetect)
                 ;;
         updateports)
-		## FIXME: this is missing 
-		## the logic for that is part of
-		## api/app.coffee and the template file in the same directory
                 ;;
 esac
-
-#echo "[$(timestamp)] ---- 3. Setup pgpool API ----"
-#setup_pgpool_api
-
-#echo "[$(timestamp)] ---- 4. Update Firewall rules ----"
-#update_firewall
-
-#echo "[$(timestamp)] ---- 5. Setting up JCatascopia Agent ----"
-#setup_JCatascopiaAgent
 
 echo "[$(timestamp)] ---- Completed ----"
 
