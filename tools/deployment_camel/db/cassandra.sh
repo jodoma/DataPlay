@@ -100,7 +100,7 @@ install_cassandra () {
 
 	# . /etc/profile
 	mkdir -p $DATA_DIR/$KEYSPACE/
-	chown -R cassandra:cassandra $DATA_DIR/ # Fix permissions
+	chown -R cassandra:cassandra $CASSANDRA_DIR/ # Fix permissions
 	
 }
 
@@ -135,12 +135,12 @@ export_variables () {
 
 import_data () {
 	LASTDATE=$(date +%Y-%m-%d) # Today
-	BACKUP_HOST="109.231.121.227" # Flexiant C2
+	BACKUP_HOST="109.231.121.72" # Flexiant C2
 	#BACKUP_HOST="108.61.197.87" # Vultr
 	BACKUP_PORT="8080"
 	BACKUP_DIR="cassandra/$LASTDATE"
 	BACKUP_USER="playgen"
-	BACKUP_PASS="D@taP1aY"
+	BACKUP_PASS="D%40taP1aY"
 
 	BACKUP_SCHEMA_FILE="$KEYSPACE-schema.cql"
 	BACKUP_DATA_FILE="$KEYSPACE-data.tar.gz"
@@ -170,7 +170,9 @@ import_data () {
 	restart_cassandra
 	check_cassandra
 
-	cqlsh $IP -f $BACKUP_SCHEMA_FILE
+       cqlsh $IP -f $(dirname  $BACKUP_SCHEMA_FILE)/dataplay-schema.cql.bkp
+       #cqlsh $IP -f $BACKUP_SCHEMA_FILE
+
 
 	service cassandra stop
 
@@ -182,7 +184,8 @@ import_data () {
 		mv $SOURCE_DIR/$table/* $DATA_DIR/$KEYSPACE/$table_name-*
 	done
 
-	chown -R cassandra:cassandra $DATA_DIR/$KEYSPACE # Fix permissions
+	chown -R cassandra:cassandra $DATA_DIR # Fix permissions
+	chown -R cassandra:cassandra $CASSANDRA_DIR # Fix permissions
 
 	rm -rf $LOG_DIR/*.log
 
@@ -231,7 +234,7 @@ case "$1" in
 		#echo "[$(timestamp)] ---- 5. Export Variables ----"
 		#export_variables
 		echo "[$(timestamp)] ---- 6. Import Data ----"
-		# import_data
+		import_data
 		#echo "[$(timestamp)] ---- 7. Update IPTables rules ----"
 		#update_iptables
 		#echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
