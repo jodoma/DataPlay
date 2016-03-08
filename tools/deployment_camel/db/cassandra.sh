@@ -100,7 +100,8 @@ install_cassandra () {
 
 	# . /etc/profile
 	mkdir -p $DATA_DIR/$KEYSPACE/
-	chown -R cassandra:cassandra $DATA_DIR/$KEYSPACE # Fix permissions
+	chown -R cassandra:cassandra $DATA_DIR/ # Fix permissions
+	
 }
 
 configure_cassandra () {
