@@ -143,7 +143,7 @@ case "$1" in
 	start)
 		service postgresql stop
 		service postgresql start
-		sleep infinity
+		#sleep infinity
 		;;
 	stop)
 		service postgresql stop

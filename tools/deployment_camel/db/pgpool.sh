@@ -84,7 +84,7 @@ case "$1" in
 	start)
 		service pgpool2 stop
 		service pgpool2 start
-		sleep infinity
+		#sleep infinity
 		;;
 	stop)
 		service pgpool2 stop

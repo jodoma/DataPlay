@@ -375,7 +375,7 @@ case "$1" in
 		start)
 			service haproxy stop
 			service haproxy start
-			sleep infinity
+			#exec sleep infinity
 			;;
 		stop)
 			service haproxy stop

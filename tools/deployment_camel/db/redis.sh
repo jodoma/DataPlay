@@ -56,7 +56,9 @@ case "$1" in
 		configure_redis
 		;;
 	start)
-		exec /usr/bin/redis-server
+		#exec /usr/bin/redis-server
+		service redis-server stop
+		service redis-server start
 		;;
 	stop)
 		;;

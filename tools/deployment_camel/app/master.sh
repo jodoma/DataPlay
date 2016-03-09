@@ -193,7 +193,7 @@ case "$1" in
 		kill_master_servers
 		export_variables
 		start_master_server
-		sleep infinity 
+		#sleep infinity 
 		;;
 	stop)
 		kill_master_servers
