@@ -9,6 +9,8 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+source $(dirname $0)/../helper.sh
+
 timestamp () {
 	date +"%F %T,%3N"
 }
@@ -27,6 +29,8 @@ install_postgres () {
 }
 
 setup_database () {
+	source $(dirname $0)/../helper.sh
+
 	DB_USER="playgen"
 	DB_PASSWORD="aDam3ntiUm"
 	DB_NAME="dataplay"
@@ -43,16 +47,14 @@ setup_database () {
 	echo "host    all             all             134.60.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	
 	# add IP and Port to listen on
-	verify_variable_set "PUBLIC_PsqlIncoming"
+	verify_variable_set "PUBLIC_PSQLINCOMING"
 	ip="0.0.0.0"
-	port=${PUBLIC_PsqlIncoming}
+	port=${PUBLIC_PSQLINCOMING}
 	echo "listen_addresses='${ip}'" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
 	echo "port=${port}" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
 }
 
 import_data () {
-	cd # /var/lib/postgresql
-
 	MAX_RETRIES="200"
 
 	DB_HOST="localhost"
@@ -95,7 +97,7 @@ setup_pgpool_access() {
 	DB_NAME="dataplay"
 	PGPOOL_VERSION="3.3.4"
 
-	cp /var/lib/postgresql/.pgpass ~/.pgpass
+	#cp /var/lib/postgresql/.pgpass ~/.pgpass
 
 	mkdir ~/pgpool-local
 
