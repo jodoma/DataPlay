@@ -94,8 +94,8 @@ case "$1" in
         stopdetect)
                 ;;
         updateports)
-                ;;
 		setup_pgpool
+                ;;
 esac
 
 echo "[$(timestamp)] ---- Completed ----"

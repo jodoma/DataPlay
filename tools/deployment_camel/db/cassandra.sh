@@ -19,6 +19,8 @@ LOCAL_DIR=$(dirname $0)
 LOGFILENAME=cassandra.log
 LOGFILE=$LOGDIR/$LOGFILENAME
 
+logsetup
+
 verify_variable_set "CONTAINER_IP"
 verify_variable_set "CassandraInport"
 verify_variable_notempty "CONTAINER_IP"

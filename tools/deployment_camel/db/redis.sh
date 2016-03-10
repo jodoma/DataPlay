@@ -9,6 +9,7 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+source $(dirname $0)/../helper.sh
 
 timestamp () {
 	date +"%F %T,%3N"
