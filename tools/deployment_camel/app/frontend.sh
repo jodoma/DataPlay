@@ -25,12 +25,16 @@ DEST="/home/ubuntu/www"
 APP="dataplay"
 WWW="www-src"
 
-verify_variable_set "CONTAINER_IP"
-verify_variable_set "CLOAD_FrontendNodeLogic"
-verify_variable_set "PUBLIC_FrontendIncoming"
-verify_variable_notempty "CONTAINER_IP"
-## this is my incoming port ##
-verify_variable_notempty "PUBLIC_FrontendNodeLogic"
+check_variables () {
+	verify_variable_set "CONTAINER_IP"
+	verify_variable_set "CLOAD_FrontendNodeLogic"
+	verify_variable_set "PUBLIC_FrontendIncoming"
+	verify_variable_notempty "CONTAINER_IP"
+	## this is my incoming port ##
+	verify_variable_notempty "PUBLIC_FrontendNodeLogic"
+	
+	DOMAIN=$PUBLIC_FrontendNodeLogic
+}
 
 #APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
 #APP_PORT=$CLOUD_FrontendIncoming
@@ -40,7 +44,7 @@ verify_variable_notempty "PUBLIC_FrontendNodeLogic"
 # LOADBALANCER_HOST=$(ss-get --timeout 360 loadbalancer.hostname)
 # LOADBALANCER_REQUEST_PORT="80"
 # LOADBALANCER_API_PORT="1937"
-DOMAIN=$PUBLIC_FrontendNodeLogic
+
 # "localhost:$APP_PORT"
 # DOMAIN="dataplay.playgen.com"
 # DOMAIN="${LOADBALANCER_HOST}:${LOADBALANCER_REQUEST_PORT}"
@@ -186,6 +190,7 @@ case "$1" in
 		# or do configure and build which is very time consuming process due to lots of node.js libraries
 		;;
 	configure)
+		check_variables
 		echo "[$(timestamp)] ---- 5. Init Frotnend ----"
 		init_frontend
 		## echo "[$(timestamp)] ---- 6. Configure Frotnend ----"
@@ -208,6 +213,7 @@ case "$1" in
 	stopdetect)
 		;;
 	updateports)
+		check_variables
 		init_frontend
 		configure_frontend
 		service nginx restart

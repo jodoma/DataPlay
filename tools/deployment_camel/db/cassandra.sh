@@ -21,10 +21,15 @@ LOGFILE=$LOGDIR/$LOGFILENAME
 
 logsetup
 
-verify_variable_set "CONTAINER_IP"
-verify_variable_set "CassandraInport"
-verify_variable_notempty "CONTAINER_IP"
-verify_variable_notempty "CassandraInport"
+check_variables () {
+	verify_variable_set "CONTAINER_IP"
+	verify_variable_set "CassandraInport"
+	verify_variable_notempty "CONTAINER_IP"
+	verify_variable_notempty "CassandraInport"
+	
+	## probably setting this to CLOUD_IP is wiser?
+	IP=$CONTAINER_IP	
+}
 
 export JAVA_HOME=/usr/lib/jvm/java-8-oracle
 export CASSANDRA_CONFIG=/etc/cassandra
@@ -35,9 +40,6 @@ DATA_DIR="$CASSANDRA_DIR/data"
 LOG_DIR="$CASSANDRA_DIR/commitlog"
 SOURCE_DIR="/tmp/cassandra-data"
 KEYSPACE="dataplay"
-
-## probably setting this to CLOUD_IP is wiser?
-IP=$CONTAINER_IP
 
 #IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
 ### we will have to update this if we run inside a container.
@@ -231,6 +233,7 @@ case "$1" in
 		install_cassandra
 		;;
 	configure)
+		check_variables
 		echo "[$(timestamp)] ---- 4. Configure Cassandra ----"
 		configure_cassandra
 		#echo "[$(timestamp)] ---- 5. Export Variables ----"
@@ -243,6 +246,7 @@ case "$1" in
 		#setup_JCatascopiaAgent
 		;;
 	start)
+		check_variables
 		restart_cassandra
 		#exec sleep infinity
 		sleep infinity

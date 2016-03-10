@@ -23,15 +23,18 @@ LOGFILE=$LOGDIR/$LOGFILENAME
 
 logsetup
 
-verify_variable_set "CONTAINER_IP"
-verify_variable_set "PUBLIC_PublicLoadBalancerPort"
-verify_variable_set "CLOUD_LoadBalancerStatsPort"
+check_variables () {
+	verify_variable_set "CONTAINER_IP"
+	verify_variable_set "PUBLIC_PublicLoadBalancerPort"
+	verify_variable_set "CLOUD_LoadBalancerStatsPort"
 
-verify_variable_notempty "CONTAINER_IP"
-verify_variable_notempty "PUBLIC_PublicLoadBalancerPort"
-verify_variable_notempty "CLOUD_LoadBalancerStatsPort"
+	verify_variable_notempty "CONTAINER_IP"
+	verify_variable_notempty "PUBLIC_PublicLoadBalancerPort"
+	verify_variable_notempty "CLOUD_LoadBalancerStatsPort"
+	
+	CONTAINER_HOST_IP=$CONTAINER_IP
+}
 
-CONTAINER_HOST_IP=$CONTAINER_IP
 GO_VERSION="go1.4.3"
 
 HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
@@ -361,6 +364,7 @@ case "$1" in
 			#setup_haproxy_api
 			;;
 		configure)
+			check_variables
 			update_config_file
 			/usr/bin/sudo sed -i -e 's/daemon//g' /etc/haproxy/haproxy.cfg
 			#echo "[$(timestamp)] ---- 4. Install GO ----"
@@ -373,6 +377,7 @@ case "$1" in
 			#update_iptables
 			;;
 		start)
+			check_variables
 			service haproxy stop
 			service haproxy start
 			#exec sleep infinity
@@ -386,6 +391,7 @@ case "$1" in
 		stopdetect)
 			;;
 		updateports)
+			check_variables
 			update_config_file
 			service haproxy restart
 			;;

@@ -21,14 +21,15 @@ LOGFILE=$LOGDIR/$LOGFILENAME
 
 logsetup
 
-#provided communication MasterNodeIncoming { port: 2181 } // the local incoming port //
-#required communication MasterNodePostgres { port: 5432 mandatory } // connection to the Database (or PgPool) MANDATORY
-#required communication MasterNodeRedis { port: 1234 mandatory } // connection to the Redis  MANDATORY
-#required communication MasterNodeCassandra { port: 1234 mandatory } // connection to the Cassandra  MANDATORY
-
-verify_variable_set "CONTAINER_IP"
-verify_variable_set "MasterNodeIncoming"
-verify_variable_notempty "MasterNodeIncoming"
+check_variables () {
+	#provided communication MasterNodeIncoming { port: 2181 } // the local incoming port //
+	#required communication MasterNodePostgres { port: 5432 mandatory } // connection to the Database (or PgPool) MANDATORY
+	#required communication MasterNodeRedis { port: 1234 mandatory } // connection to the Redis  MANDATORY
+	#required communication MasterNodeCassandra { port: 1234 mandatory } // connection to the Cassandra  MANDATORY
+	verify_variable_set "CONTAINER_IP"
+	verify_variable_set "MasterNodeIncoming"
+	verify_variable_notempty "MasterNodeIncoming"
+}
 
 GO_VERSION="go1.4.3"
 DEST="/home/ubuntu/www"
@@ -182,6 +183,7 @@ case "$1" in
 		install_master_server
 		;;
 	configure)
+		check_variables
 		echo "[$(timestamp)] ---- 4. Kill (Master) Server ----"
 		kill_master_servers
 		echo "[$(timestamp)] ---- 5. Export Variables ----"
@@ -190,6 +192,7 @@ case "$1" in
 		setup_service_script
 	;;
 	start)
+		check_variables
 		kill_master_servers
 		export_variables
 		start_master_server
@@ -200,6 +203,7 @@ case "$1" in
 		kill -9 1
 		;;
 	updateports)
+		check_variables
 		kill_master_servers
 		export_variables
 		start_master_server
