@@ -36,7 +36,7 @@ DEST="/home/ubuntu/www"
 APP="dataplay"
 
 export GOROOT=/home/ubuntu/go 
-export PATH="$PATH:\$GOROOT/bin"
+export PATH="$PATH:$GOROOT/bin"
 
 export GOPATH=/home/ubuntu/gocode
 export PATH="$PATH:$GOPATH/bin"
