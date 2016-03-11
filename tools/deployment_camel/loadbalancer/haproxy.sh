@@ -25,12 +25,12 @@ logsetup
 
 check_variables () {
 	verify_variable_set "CONTAINER_IP"
-	verify_variable_set "PUBLIC_PublicLoadBalancerPort"
-	verify_variable_set "CLOUD_LoadBalancerStatsPort"
+	verify_variable_set "PUBLIC_PUBLICLOADBALANCERPORT"
+	verify_variable_set "CLOUD_LOADBALANCERSTATSPORT"
 
 	verify_variable_notempty "CONTAINER_IP"
-	verify_variable_notempty "PUBLIC_PublicLoadBalancerPort"
-	verify_variable_notempty "CLOUD_LoadBalancerStatsPort"
+	verify_variable_notempty "PUBLIC_PUBLICLOADBALANCERPORT"
+	verify_variable_notempty "CLOUD_LOADBALANCERSTATSPORT"
 	
 	CONTAINER_HOST_IP=$CONTAINER_IP
 }
@@ -97,7 +97,7 @@ echo "    errorfile 503 /etc/haproxy/errors/503.http" >> ${PWD}/haproxy.cfg
 echo "    errorfile 504 /etc/haproxy/errors/504.http" >> ${PWD}/haproxy.cfg
 echo "" >> ${PWD}/haproxy.cfg
 echo "frontend web" >> ${PWD}/haproxy.cfg
-echo "    bind *:${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
+echo "    bind *:${PUBLIC_PUBLICLOADBALANCERPORT}" >> ${PWD}/haproxy.cfg
 echo "" >> ${PWD}/haproxy.cfg
 echo "    # API traffic goes to Master cluster" >> ${PWD}/haproxy.cfg
 echo "    acl api path_beg /api" >> ${PWD}/haproxy.cfg
@@ -116,7 +116,7 @@ echo "    {% endfor %}" >> ${PWD}/haproxy.cfg
 
 print_config_file_footer() {
 echo "" >> ${PWD}/haproxy.cfg
-echo "listen stats *:${CLOUD_LoadBalancerStatsPort}" >> ${PWD}/haproxy.cfg
+echo "listen stats *:${CLOUD_LOADBALANCERSTATSPORT}" >> ${PWD}/haproxy.cfg
 echo "    stats enable" >> ${PWD}/haproxy.cfg
 echo "    stats uri /" >> ${PWD}/haproxy.cfg
 echo "    stats hide-version" >> ${PWD}/haproxy.cfg
@@ -126,7 +126,7 @@ echo "    stats auth playgen:D@taP1aY" >> ${PWD}/haproxy.cfg
 add_gamification_prefix() {
 echo "" >> ${PWD}/haproxy.cfg
 echo "backend gamification" >> ${PWD}/haproxy.cfg
-echo "    http-request set-header X-Forwarded-Port ${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
+echo "    http-request set-header X-Forwarded-Port ${PUBLIC_PUBLICLOADBALANCERPORT}" >> ${PWD}/haproxy.cfg
 echo "    http-request add-header X-Forwarded-Proto https if { ssl_fc }" >> ${PWD}/haproxy.cfg
 echo "    option httpchk HEAD / HTTP/1.1\r\nHost:localhost" >> ${PWD}/haproxy.cfg
 echo "    cookie DPSession prefix" >> ${PWD}/haproxy.cfg
@@ -135,7 +135,7 @@ echo "    cookie DPSession prefix" >> ${PWD}/haproxy.cfg
 add_master_prefix() {
 echo "" >> ${PWD}/haproxy.cfg
 echo "backend masters" >> ${PWD}/haproxy.cfg
-echo "    http-request set-header X-Forwarded-Port ${PUBLIC_PublicLoadBalancerPort}" >> ${PWD}/haproxy.cfg
+echo "    http-request set-header X-Forwarded-Port ${PUBLIC_PUBLICLOADBALANCERPORT}" >> ${PWD}/haproxy.cfg
 echo "    http-request add-header X-Forwarded-Proto https if { ssl_fc }" >> ${PWD}/haproxy.cfg
 echo "    option httpchk HEAD /api/ping HTTP/1.1\r\nHost:localhost" >> ${PWD}/haproxy.cfg
 echo "    cookie DPSession prefix" >> ${PWD}/haproxy.cfg
@@ -160,7 +160,7 @@ update_config_file() {
 echo "" > ${PWD}/haproxy.cfg
 
 verify_variable_set "CLOUD_MasterDownstreamPort"
-verify_variable_set "CLOUD_GamificationDownstreamPort"
+verify_variable_set "CLOUD_GamificationDownstreamNode"
 
 print_config_file_header
 
@@ -181,15 +181,15 @@ fi
 
 add_gamification_prefix
 counter=0
-if [ -z ${CLOUD_GamificationDownstreamPort} ] ; then 
+if [ -z ${CLOUD_GamificationDownstreamNode} ] ; then 
 	log "no gamification downstream nodes set"
 else 
-    arr=$(echo $CLOUD_GamificationDownstreamPort | tr "," "\n")
+    arr=$(echo $CLOUD_GamificationDownstreamNode | tr "," "\n")
     for x in $arr
     ## take the last one (for no particular reason)
         do
 		add_gamification_node $x $counter
-                log "CLOUD_GamificationDownstreamPort > [$x]"
+                log "CLOUD_GamificationDownstreamNode > [$x]"
 		counter=$((counter+1))
         done
 fi
