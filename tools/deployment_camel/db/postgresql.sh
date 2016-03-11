@@ -29,8 +29,6 @@ install_postgres () {
 }
 
 setup_database () {
-	source $(dirname $0)/../helper.sh
-
 	DB_USER="playgen"
 	DB_PASSWORD="aDam3ntiUm"
 	DB_NAME="dataplay"
@@ -73,6 +71,8 @@ import_data () {
 
 	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
 
+	cd ~
+
 	i="1"
 	if [[ $i -ge $MAX_RETRIES ]]; then
 		echo >&2 "Error: Unable to fetch '$BACKUP_FILE' from backup server."; exit 1;
@@ -100,7 +100,8 @@ setup_pgpool_access() {
 	#cp /var/lib/postgresql/.pgpass ~/.pgpass
 
 	mkdir ~/pgpool-local
-
+	cd ~
+	
 	wget http://www.pgpool.net/download.php?f=pgpool-II-$PGPOOL_VERSION.tar.gz -O pgpool-II-$PGPOOL_VERSION.tar.gz
 
 	tar -xvzf pgpool-II-$PGPOOL_VERSION.tar.gz
@@ -135,6 +136,8 @@ case "$1" in
 	configure)
 		echo "[$(timestamp)] ---- 4. Create user and database ----"
 		export -f setup_database
+                export -f verify_variable_set
+                export -f log		
 		su postgres -c 'setup_database'
 		#sudo -u postgres $(typeset -f setup_database); setup_database # Run function as user 'postgres'
 		echo "[$(timestamp)] ---- 5. Setup pgpool access ----"
