@@ -31,8 +31,8 @@ setup_pgpool () {
 	DB_PASSWORD="aDam3ntiUm"
 	DB_VERSION="9.4"
 
-	verify_variable_set "PUBLIC_PgPoolIncoming"
-	verify_variable_notempty "PUBLIC_PgPoolIncoming"
+	verify_variable_set "PUBLIC_PGPOOLINCOMING"
+	verify_variable_notempty "PUBLIC_PGPOOLINCOMING"
 
 	# INJECT PASSWORD
 	pg_md5 -m -f /etc/pgpool2/pgpool.conf-u $DB_USER $DB_PASSWORD
@@ -63,7 +63,7 @@ setup_pgpool () {
 	echo $config_nodes >> /etc/pgpool2/pgpool.conf
 	
 	# set port
-	echo "port = ${PUBLIC_PgPoolIncoming}" >> /etc/pgpool2/pgpool.conf	
+	echo "port = ${PUBLIC_PGPOOLINCOMING}" >> /etc/pgpool2/pgpool.conf	
 	
 }
 
