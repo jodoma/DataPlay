@@ -142,7 +142,7 @@ case "$1" in
 		export -f setup_database
                 export -f verify_variable_set
                 export -f log		
-		su postgres -c 'setup_database'
+		su postgres -c -m 'setup_database'
 		#sudo -u postgres $(typeset -f setup_database); setup_database # Run function as user 'postgres'
 		echo "[$(timestamp)] ---- 5. Setup pgpool access ----"
 		setup_pgpool_access	
@@ -150,7 +150,7 @@ case "$1" in
 		service postgresql restart
 		echo "[$(timestamp)] ---- 7. Import Data ----"
 		export -f import_data
-		su postgres -c 'import_data'
+		su postgres -c  -m 'import_data'
 		#sudo -u postgres $(typeset -f import_data); import_data # Run function as user 'postgres'
 		;;
 	start)
