@@ -35,7 +35,7 @@ GO_VERSION="go1.4.3"
 DEST="/home/ubuntu/www"
 APP="dataplay"
 
-export GOROOT=/home/ubuntu/go 
+export GOROOT=/home/ubuntu/go
 export PATH="$PATH:$GOROOT/bin"
 
 export GOPATH=/home/ubuntu/gocode

@@ -29,6 +29,7 @@ install_postgres () {
 }
 
 setup_database () {
+	set -ex
 	DB_USER="playgen"
 	DB_PASSWORD="aDam3ntiUm"
 	DB_NAME="dataplay"
@@ -53,6 +54,7 @@ setup_database () {
 }
 
 import_data () {
+	set -ex
 	MAX_RETRIES="200"
 
 	DB_HOST="localhost"
@@ -69,9 +71,10 @@ import_data () {
 	BACKUP_PASS="D%40taP1aY"
 	BACKUP_FILE="$DB_NAME.sql.gz"
 
-	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
 
 	cd ~
+
+	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
 
 	i="1"
 	if [[ $i -ge $MAX_RETRIES ]]; then
@@ -99,16 +102,17 @@ setup_pgpool_access() {
 
 	#cp /var/lib/postgresql/.pgpass ~/.pgpass
 
-	mkdir ~/pgpool-local
-	cd ~
+	mkdir -p ~/pgpool-local
 	
-	wget http://www.pgpool.net/download.php?f=pgpool-II-$PGPOOL_VERSION.tar.gz -O pgpool-II-$PGPOOL_VERSION.tar.gz
+	wget http://www.pgpool.net/download.php?f=pgpool-II-$PGPOOL_VERSION.tar.gz -O /tmp/pgpool-II-$PGPOOL_VERSION.tar.gz
+
+	cd /tmp
 
 	tar -xvzf pgpool-II-$PGPOOL_VERSION.tar.gz
 
 	#cp pgpool-II-$PGPOOL_VERSION/src/sql/pgpool_adm/pgpool_adm.sql.in ~/pgpool-local/pgpool_adm.sql
-	cp pgpool-II-$PGPOOL_VERSION/src/sql/pgpool-recovery/pgpool-recovery.sql.in ~/pgpool-local/pgpool-recovery.sql
-	cp pgpool-II-$PGPOOL_VERSION/src/sql/pgpool-regclass/pgpool-regclass.sql.in ~/pgpool-local/pgpool-regclass.sql
+	cp /tmp/pgpool-II-$PGPOOL_VERSION/sql/pgpool-recovery/pgpool-recovery.sql.in ~/pgpool-local/pgpool-recovery.sql
+	cp /tmp/pgpool-II-$PGPOOL_VERSION/sql/pgpool-regclass/pgpool-regclass.sql.in ~/pgpool-local/pgpool-regclass.sql
 
 	#sed -i "s/MODULE_PATHNAME/\/usr\/lib\/postgresql\/$DB_VERSION\/lib\/pgpool_adm/g" ~/pgpool-local/pgpool_adm.sql
 	# Note: error on line # 45 & 51 should retrun integer
