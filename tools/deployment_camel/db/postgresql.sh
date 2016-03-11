@@ -134,13 +134,13 @@ case "$1" in
 		;;
 	configure)
 		echo "[$(timestamp)] ---- 4. Create user and database ----"
-		su postgres -c "$(typeset -f setup_database); setup_database" # Run function as user 'postgres'
+		sudo -u postgres "$(typeset -f setup_database); setup_database" # Run function as user 'postgres'
 		echo "[$(timestamp)] ---- 5. Setup pgpool access ----"
 		setup_pgpool_access	
 		echo "[$(timestamp)] ---- 6. Restart PostgreSQL as root ----"
 		service postgresql restart
 		echo "[$(timestamp)] ---- 7. Import Data ----"
-		su postgres -c "$(typeset -f import_data); import_data" # Run function as user 'postgres'
+		sudo -u postgres "$(typeset -f import_data); import_data" # Run function as user 'postgres'
 		;;
 	start)
 		service postgresql stop
