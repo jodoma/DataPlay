@@ -39,7 +39,7 @@ export GOROOT=/home/ubuntu/go
 export PATH="$PATH:\$GOROOT/bin"
 
 export GOPATH=/home/ubuntu/gocode
-export PATH="PATH:GOPATH/bin"
+export PATH="$PATH:$GOPATH/bin"
 
 timestamp () {
 	date +"%F %T,%3N"
