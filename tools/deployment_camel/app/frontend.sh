@@ -27,10 +27,11 @@ WWW="www-src"
 
 check_variables () {
 	verify_variable_set "CONTAINER_IP"
-	verify_variable_set "CLOAD_FrontendNodeLogic"
-	verify_variable_set "PUBLIC_FrontendIncoming"
+	verify_variable_set "PUBLIC_FrontendNodeLogic"
+	verify_variable_set "CLOUD_FRONTENDNODEINCOMING"
 	verify_variable_notempty "CONTAINER_IP"
-	## this is my incoming port ##
+	verify_variable_notempty "CLOUD_FRONTENDNODEINCOMING"
+	## this is my outgoing port; it is the same as the global port ##
 	verify_variable_notempty "PUBLIC_FrontendNodeLogic"
 	
 	DOMAIN=$PUBLIC_FrontendNodeLogic
@@ -176,6 +177,7 @@ setup_service_script () {
 #	rm ./jcatascopia-agent.sh
 #}
 
+## FIXME: use configured port
 case "$1" in
 	install)
 		echo "[$(timestamp)] ---- 1. Setup Host ----"

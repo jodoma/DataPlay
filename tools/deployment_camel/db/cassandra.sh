@@ -173,9 +173,10 @@ import_data () {
 
 	restart_cassandra
 	check_cassandra
-
-       cqlsh $IP -f $(dirname  $BACKUP_SCHEMA_FILE)/dataplay-schema.cql.bkp
-       #cqlsh $IP -f $BACKUP_SCHEMA_FILE
+	##FIXME: verify sedexpression
+	sed -i -e 's/AND caching = {"keys":"ALL", "rows_per_partition":"NONE"}"/AND caching = {\'keys\':\'ALL\', \'rows_per_partition\':\'NONE\'}\'/'  $BACKUP_SCHEMA_FILE
+       #cqlsh $IP -f $(dirname  $BACKUP_SCHEMA_FILE)/dataplay-schema.cql.bkp
+       cqlsh $IP -f $BACKUP_SCHEMA_FILE
 
 
 	service cassandra stop

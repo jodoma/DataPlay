@@ -34,11 +34,11 @@ install_redis () {
 }
 
 configure_redis () {
-	verify_variable_set "PUBLIC_RedisIncoming"
-	verify_variable_notempty "PUBLIC_RedisIncoming"
+	verify_variable_set "CLOUD_REDISINCOMING"
+	verify_variable_notempty "CLOUD_REDISINCOMING"
 	
-	redisIP=${PUBLIC_RedisIncoming%:*}
-	redisPort=${PUBLIC_RedisIncoming#*:}
+	redisIP=${CLOUD_REDISINCOMING%:*}
+	redisPort=${CLOUD_REDISINCOMING#*:}
 	
 	sed -i "s/bind .*/bind ${redisIP}/" /etc/redis/redis.conf
 	sed -i "s/port .*/port ${redisPort}/" /etc/redis/redis.conf
