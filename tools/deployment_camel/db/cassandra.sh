@@ -177,7 +177,7 @@ import_data () {
 	#SEARCH="AND caching = {\"keys\":\"ALL\", \"rows_per_partition\":\"NONE\"}"
 	#REPLACE="AND caching = {'keys':'ALL', 'rows_per_partition':'NONE'}'"
 	#sed -i -e "s/$SEARCH/$REPLACE/g" $BACKUP_SCHEMA_FILE
-	sed -e "s/AND caching = '{\"keys\":\"ALL\", \"rows_per_partition\":\"NONE\"}'/AND caching = '{ 'keys':'ALL', 'rows_per_partition' : 'NONE'}'/g" $BACKUP_SCHEMA_FILE
+	sed -i -e "s/AND caching = '{\"keys\":\"ALL\", \"rows_per_partition\":\"NONE\"}'/AND caching = '{ 'keys':'ALL', 'rows_per_partition' : 'NONE'}'/g" $BACKUP_SCHEMA_FILE
        #cqlsh $IP -f $(dirname  $BACKUP_SCHEMA_FILE)/dataplay-schema.cql.bkp
        cqlsh $IP -f $BACKUP_SCHEMA_FILE
 
