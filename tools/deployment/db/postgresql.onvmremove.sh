@@ -9,7 +9,6 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
-#PGPOOL_API_HOST="109.231.124.33"
 PGPOOL_API_HOST=$(ss-get --timeout 360 pgpool.hostname)
 PGPOOL_API_PORT="1937"
 

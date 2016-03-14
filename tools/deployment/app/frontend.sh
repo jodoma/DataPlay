@@ -17,15 +17,11 @@ APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print
 APP_PORT="80"
 APP_TYPE="gamification"
 
-# LOADBALANCER_HOST="109.231.121.26"
 LOADBALANCER_HOST=$(ss-get --timeout 360 loadbalancer.hostname)
 LOADBALANCER_REQUEST_PORT="80"
 LOADBALANCER_API_PORT="1937"
 # DOMAIN="dataplay.playgen.com"
 DOMAIN="${LOADBALANCER_HOST}:${LOADBALANCER_REQUEST_PORT}"
-
-JCATASCOPIA_REPO="109.231.126.62"
-JCATASCOPIA_DASHBOARD="109.231.122.112"
 
 timestamp () {
 	date +"%F %T,%3N"
@@ -71,7 +67,7 @@ install_nginx () {
 
 	chown ubuntu:www-data $DEST/$APP/$WWW
 
-	service nginx reload
+	/etc/init.d/nginx reload
 }
 
 download_app () {
@@ -132,19 +128,6 @@ setup_service_script () {
 	chmod +x $DEST/$SERVICE
 }
 
-#added to automate JCatascopiaAgent installation
-setup_JCatascopiaAgent(){
-	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
-
-	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
-
-	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
-
-	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
-
-	rm ./jcatascopia-agent.sh
-}
-
 echo "[$(timestamp)] ---- 1. Setup Host ----"
 setuphost
 
@@ -162,20 +145,11 @@ download_app
 echo "[$(timestamp)] ---- 5. Init Frotnend ----"
 init_frontend
 
-# echo "[$(timestamp)] ---- 6. Configure Frotnend ----"
-# configure_frontend
-
-# echo "[$(timestamp)] ---- 7. Build Frontend ----"
-# su ubuntu -c "$(typeset -f build_frontend); build_frontend" # Run function as user 'ubuntu'
-
 echo "[$(timestamp)] ---- 6. Inform Load Balancer (Add) ----"
 inform_loadbalancer
 
 echo "[$(timestamp)] ---- 7. Setup Service Script ----"
 setup_service_script
-
-echo "[$(timestamp)] ---- 8. Setting up JCatascopia Agent ----"
-setup_JCatascopiaAgent
 
 echo "[$(timestamp)] ---- Completed ----"
 

@@ -15,9 +15,6 @@ REPO="DataPlay"
 BRANCH="master"
 SOURCE="$URL/$USER/$REPO/$BRANCH"
 
-JCATASCOPIA_REPO="109.231.126.62"
-JCATASCOPIA_DASHBOARD="109.231.122.112"
-
 timestamp () {
 	date +"%F %T,%3N"
 }
@@ -32,37 +29,35 @@ install_pgpool () {
 	DB_USER="playgen"
 	DB_PASSWORD="aDam3ntiUm"
 
-	yum install -y epel-release http://yum.postgresql.org/9.4/redhat/rhel-7-x86_64/pgdg-centos94-9.4-1.noarch.rpm
-	yum install -y http://www.pgpool.net/yum/rpms/3.4/redhat/rhel-7-x86_64/pgpool-II-release-3.4-1.noarch.rpm
+	echo "deb http://apt.postgresql.org/pub/repos/apt/ wily-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+	apt-get install -y wget ca-certificates rsyslog
+	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+	apt-get update
+	apt-get install -y axel postgresql-client-9.4 pgpool2
 
-	# yum update -y
+	# Provides UDP syslog reception
+	sed -i 's/^#module(load="imudp")/module(load="imudp")/g' /etc/rsyslog.conf
+	sed -i 's/^#input(type="imudp" port="514")/input(type="imudp" port="514")/g' /etc/rsyslog.conf
 
-	yum install -y pgpool-II-94 pgpool-II-94-extensions postgresql94
+	# Provides TCP syslog reception
+	sed -i 's/^#module(load="imtcp")/module(load="imtcp")/g' /etc/rsyslog.conf
+	sed -i 's/^#input(type="imtcp" port="514")/input(type="imtcp" port="514")/g' /etc/rsyslog.conf
 
-	sed -i 's/^#$ModLoad imudp/$ModLoad imudp/g' /etc/rsyslog.conf
-	sed -i 's/^#$UDPServerRun 514/$UDPServerRun 514/g' /etc/rsyslog.conf
-	sed -i 's/^#$ModLoad imtcp/$ModLoad imtcp/g' /etc/rsyslog.conf
-	sed -i 's/^#$InputTCPServerRun 514/$InputTCPServerRun 514/g' /etc/rsyslog.conf
-	echo "local0.*                                                /var/log/pgpool.log" >> /etc/rsyslog.conf
+	echo "
+	# Save PgPool-II log to pgpool.log
+	local0.*                                                /var/log/pgpool.log" >> /etc/rsyslog.conf
 
-	systemctl restart rsyslog.service
-	systemctl enable rsyslog.service
+	service rsyslog restart
 
-	/usr/pgsql-9.4/bin/postgresql94-setup initdb
+	echo "$DB_USER:`pg_md5 $DB_PASSWORD`" >> /etc/pgpool2/pcp.conf
 
-	systemctl restart postgresql-9.4
-	systemctl enable postgresql-9.4
-
-	cp /etc/pgpool-II-94/pcp.conf.sample /etc/pgpool-II-94/pcp.conf
-	echo "$DB_USER:`pg_md5 $DB_PASSWORD`" >> /etc/pgpool-II-94/pcp.conf
-
-	cp /etc/pgpool-II-94/pool_hba.conf.sample /etc/pgpool-II-94/pool_hba.conf
-	echo "host    all         all         0.0.0.0/0             md5" >> /etc/pgpool-II-94/pool_hba.conf
+	echo "host    all         all         0.0.0.0/0             md5" >> /etc/pgpool2/pool_hba.conf
 
 	pg_md5 -m -u $DB_USER $DB_PASSWORD # Generate pool_passwd
 
-	systemctl restart pgpool-II-94
-	systemctl enable pgpool-II-94
+	chown postgres.postgres /etc/pgpool2/pool_passwd
+
+	service pgpool2 restart
 }
 
 setup_pgpool_api () {
@@ -70,7 +65,7 @@ setup_pgpool_api () {
 
 	command -v npm >/dev/null 2>&1 || { echo >&2 'Error: Command "npm" not found!'; exit 1; }
 
-	command -v forever >/dev/null 2>&1 || { echo >&2 'Error: "forever" is not installed!'; exit 1; }
+	command -v pm2 >/dev/null 2>&1 || { echo >&2 "Error: 'pm2' is not installed!"; exit 1; }
 
 	command -v coffee >/dev/null 2>&1 || { echo >&2 'Error: "coffee-script" is not installed!'; exit 1; }
 
@@ -85,7 +80,11 @@ setup_pgpool_api () {
 
 	coffee -cb app.coffee > app.js
 
-	forever -a start -l forever.log -o output.log -e errors.log app.js >/dev/null 2>&1
+	pm2 startup
+
+	pm2 start app.js --name="pgpool-api" -o output.log -e errors.log
+
+	pm2 save
 
 	###
 	# curl -i -H "Accept: application/json" -H "Content-Type: application/json" -X POST -d '{"ip":"109.231.124.33"}' http://109.231.124.33:1937
@@ -114,24 +113,11 @@ setup_pgpoolAdmin () {
 	chcon -R -t httpd_sys_content_rw_t /var/log/pgpool.log
 }
 
-update_firewall () {
-	firewall-cmd --permanent --add-port=1937/tcp # pgpool-API
-	firewall-cmd --permanent --add-port=9999/tcp # pgpool
+update_iptables () {
+	iptables -A INPUT -p tcp --dport 1937 -j ACCEPT # PgPool-II API
+	iptables -A INPUT -p tcp --dport 9999 -j ACCEPT # PgPool-II listener
 
-	firewall-cmd --reload
-}
-
-#added to automate JCatascopiaAgent installation
-setup_JCatascopiaAgent(){
-	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
-
-	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
-
-	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
-
-	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
-
-	rm ./jcatascopia-agent.sh
+	iptables-save
 }
 
 echo "[$(timestamp)] ---- 1. Setup Host ----"
@@ -143,11 +129,8 @@ install_pgpool
 echo "[$(timestamp)] ---- 3. Setup pgpool API ----"
 setup_pgpool_api
 
-echo "[$(timestamp)] ---- 4. Update Firewall rules ----"
-update_firewall
-
-echo "[$(timestamp)] ---- 5. Setting up JCatascopia Agent ----"
-setup_JCatascopiaAgent
+echo "[$(timestamp)] ---- 4. Update IPTables rules ----"
+update_iptables
 
 echo "[$(timestamp)] ---- Completed ----"
 

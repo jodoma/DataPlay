@@ -72,8 +72,8 @@ install_go () {
 export_variables () {
 	verify_variable_set "CLOUD_MasterNodePgPool"
 	verify_variable_notempty "CLOUD_MasterNodePgPool"
-	pgIP=${CLOUD_MasterNodePostgres%:*}
-	pgPort=${CLOUD_MasterNodePostgres#*:}
+	pgIP=${CLOUD_MasterNodePgPool%:*}
+	pgPort=${CLOUD_MasterNodePgPool#*:}
 
 	verify_variable_set "CLOUD_MasterNodeRedis"
 	verify_variable_notempty "CLOUD_MasterNodeRedis"
