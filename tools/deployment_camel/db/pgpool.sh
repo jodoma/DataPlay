@@ -34,8 +34,10 @@ setup_pgpool () {
 	verify_variable_set "PUBLIC_PGPOOLINCOMING"
 	verify_variable_notempty "PUBLIC_PGPOOLINCOMING"
 
+	cat /root/DataPlay/tools/deployment_camel/db/pgpool.conf > /etc/pgpool2/pgpool.conf
+
 	# INJECT PASSWORD
-	pg_md5 -m -f /etc/pgpool2/pgpool.conf-u $DB_USER $DB_PASSWORD
+	pg_md5 -m -f /etc/pgpool2/pgpool.conf -u $DB_USER $DB_PASSWORD
 	chmod 660 /etc/pgpool2/pool_passwd
 	chgrp postgres /etc/pgpool2/pool_passwd
 
@@ -59,9 +61,8 @@ setup_pgpool () {
 			counter=$((counter+1))
 		done
 	fi
-	cat pgpool.conf > /etc/pgpool2/pgpool.conf
+
 	echo $config_nodes >> /etc/pgpool2/pgpool.conf
-	
 	# set port
 	echo "port = ${PUBLIC_PGPOOLINCOMING}" >> /etc/pgpool2/pgpool.conf	
 	
