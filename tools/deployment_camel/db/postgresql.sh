@@ -71,9 +71,9 @@ import_data () {
 	BACKUP_PASS="D%40taP1aY"
 	BACKUP_FILE="$DB_NAME.sql.gz"
 
-
-	cd ~
-	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
+	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > /var/lib/postgresql/.pgpass
+	chmod 0600 /var/lib/postgresql/.pgpass
+	chown postgres:postgres /var/lib/postgresql/.pgpass
 
 	i="1"
 	if [[ $i -ge $MAX_RETRIES ]]; then
@@ -99,9 +99,11 @@ setup_pgpool_access() {
 	DB_NAME="dataplay"
 	PGPOOL_VERSION="3.3.4"
 
-	#cp /var/lib/postgresql/.pgpass ~/.pgpass
-	cd ~
-	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
+	#cd ~
+	#echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
+	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > /root/.pgpass
+	chmod 0600 /root/.pgpass
+	chown root:root /root/.pgpass
 
 	mkdir -p ~/pgpool-local
 	
