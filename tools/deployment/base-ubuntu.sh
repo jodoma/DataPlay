@@ -13,6 +13,12 @@ timestamp () {
 	date +"%F %T,%3N"
 }
 
+setuphost () {
+	HOSTNAME=$(hostname)
+	HOSTLOCAL="127.0.0.1"
+	echo "$HOSTLOCAL $HOSTNAME" >> /etc/hosts
+}
+
 setup_ssh_keys () {
 	URL="https://raw.githubusercontent.com"
 	USER="playgenhub"
@@ -25,34 +31,30 @@ setup_ssh_keys () {
 }
 
 update () {
-	apt-get update
-	sudo DEBIAN_FRONTEND=noninteractive apt-get -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" upgrade
+	sudo DEBIAN_FRONTEND=noninteractive apt-get update && apt-get -o Dpkg::Options::="--force-confold" upgrade -q -y --force-yes && apt-get -o Dpkg::Options::="--force-confold" dist-upgrade -q -y --force-yes
 }
 
 install_essentials () {
-	apt-get install -y build-essential sudo vim openssh-server gcc curl git mercurial bzr make binutils bison wget axel python-software-properties htop unzip
+	apt-get install -y build-essential sudo ntpdate vim openssh-server gcc curl git mercurial bzr make binutils bison wget axel python-software-properties htop unzip dos2unix
 }
 
 install_nodejs () {
-	curl -sL https://deb.nodesource.com/setup_0.10 | sudo -E bash -
+	curl -sL https://raw.githubusercontent.com/playgenhub/DataPlay/master/tools/deployment/nodejs.sh | bash -
 	apt-get install -y python g++ make nodejs
-	npm install -g grunt-cli coffee-script bower forever
+	npm -g install npm@latest
+	npm install -g grunt-cli coffee-script bower forever pm2
 }
 
-update_iptables () {
-	# Monitoring ports 80, 8080, 4242, 4243, 4245 for JCatascopia
+update_firewall () {
 	iptables -A INPUT -p tcp --dport 80 -j ACCEPT
 	iptables -A INPUT -p tcp --dport 443 -j ACCEPT
 	iptables -A INPUT -p tcp --dport 8080 -j ACCEPT
-	iptables -A INPUT -p tcp --dport 4242 -j ACCEPT
-	iptables -A INPUT -p tcp --dport 4243 -j ACCEPT
-	iptables -A INPUT -p tcp --dport 4245 -j ACCEPT
 
 	iptables-save
 }
 
-echo "[$(timestamp)] ---- 1. Setup SSH Access Keys ----"
-setup_ssh_keys
+echo "[$(timestamp)] ---- 1. Setup Host ----"
+setuphost
 
 echo "[$(timestamp)] ---- 2. Update system ----"
 update
@@ -60,11 +62,14 @@ update
 echo "[$(timestamp)] ---- 3. Install essential packages ----"
 install_essentials
 
-echo "[$(timestamp)] ---- 4. Install Node.js ----"
+echo "[$(timestamp)] ---- 4. Setup SSH Access Keys ----"
+setup_ssh_keys
+
+echo "[$(timestamp)] ---- 5. Install Node.js ----"
 install_nodejs
 
-echo "[$(timestamp)] ---- 5. Update IPTables rules ----"
-update_iptables
+echo "[$(timestamp)] ---- 6. Update Firewall rules ----"
+update_firewall
 
 echo "[$(timestamp)] ---- Completed ----"
 
