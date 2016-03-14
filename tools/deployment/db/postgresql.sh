@@ -10,13 +10,10 @@ if [ "$(id -u)" != "0" ]; then
 fi
 
 APP_HOST=$(ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}')
+APP_PORT="5432"
 
-#PGPOOL_API_HOST="109.231.124.33"
 PGPOOL_API_HOST=$(ss-get --timeout 360 pgpool.hostname)
 PGPOOL_API_PORT="1937"
-
-JCATASCOPIA_REPO="109.231.126.62"
-JCATASCOPIA_DASHBOARD="109.231.122.112"
 
 timestamp () {
 	date +"%F %T,%3N"
@@ -29,10 +26,12 @@ setuphost () {
 }
 
 install_postgres () {
+	echo "deb http://apt.postgresql.org/pub/repos/apt/ wily-pgdg main" > /etc/apt/sources.list.d/pgdg.list
+	apt-get install -y wget ca-certificates
+	wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
 	apt-get update
-	apt-get install -y axel postgresql postgresql-contrib postgresql-client libpq-dev
-	apt-get autoclean
-	service postgresql restart
+	apt-get install -y axel postgresql-9.4 postgresql-contrib-9.4 postgresql-client-9.4 libpq-dev
+	/etc/init.d/postgresql restart
 }
 
 setup_database () {
@@ -56,7 +55,11 @@ setup_database () {
 	echo "host    all             all             109.231.124.0/24        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	echo "host    all             all             109.231.125.0/24        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	echo "host    all             all             109.231.126.0/24        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	echo "host    all             all             109.231.127.0/24        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	echo "host    all             all             213.122.181.2/32        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	echo "host    all             all             149.11.102.50/32        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	echo "host    all             all             134.60.64.0/24          md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	echo "host    all             all             192.168.0.0/16          md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 
 	# And add 'listen_addresses' to '/etc/postgresql/$DB_VERSION/main/postgresql.conf'
 	echo "listen_addresses='*'" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
@@ -75,7 +78,6 @@ import_data () {
 
 	LASTDATE=$(date +%Y-%m-%d) # Today
 	BACKUP_HOST="109.231.121.72" # Flexiant C2
-	#BACKUP_HOST="108.61.197.87" # Vultr
 	BACKUP_PORT="8080"
 	BACKUP_DIR="postgresql/$LASTDATE-daily"
 	BACKUP_USER="playgen"
@@ -108,78 +110,25 @@ update_iptables () {
 
 setup_pgpool_access() {
 	DB_VERSION="9.4"
-	DB_HOST="localhost"
-	DB_PORT="5432"
-	DB_USER="playgen"
-	DB_PASSWORD="aDam3ntiUm"
-	DB_NAME="dataplay"
-	PGPOOL_VERSION="3.4.2"
 
 	cp /var/lib/postgresql/.pgpass ~/.pgpass
 
-	mkdir ~/pgpool-local
+	echo "host    all             playgen         172.17.0.0/16 		md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	echo "host    all             playgen         $PGPOOL_API_HOST/24       md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 
-	echo "host    all             playgen         $PGPOOL_API_HOST/32       md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	/etc/init.d/postgresql restart
 
-	service postgresql restart
+	apt-get install -y postgresql-9.4-pgpool2 pgpool2
 
-	apt-get install -y postgresql-9.4-pgpool2
-
-	#apt-get install -y build-essential
-
-	wget http://www.pgpool.net/download.php?f=pgpool-II-$PGPOOL_VERSION.tar.gz -O pgpool-II-$PGPOOL_VERSION.tar.gz
-
-	tar -xvzf pgpool-II-$PGPOOL_VERSION.tar.gz
-
-	cp pgpool-II-$PGPOOL_VERSION/src/sql/pgpool_adm/pgpool_adm.sql.in ~/pgpool-local/pgpool_adm.sql
-	cp pgpool-II-$PGPOOL_VERSION/src/sql/pgpool-recovery/pgpool-recovery.sql.in ~/pgpool-local/pgpool-recovery.sql
-	cp pgpool-II-$PGPOOL_VERSION/src/sql/pgpool-regclass/pgpool-regclass.sql.in ~/pgpool-local/pgpool-regclass.sql
-
-	###
-	# ls -al /usr/lib/postgresql/9.4/lib/ | grep 'pgpool'
-	# -rw-r--r-- 1 root root   14432 Nov  6 21:15 pgpool_adm.so
-	# -rw-r--r-- 1 root root   14040 Nov  6 21:15 pgpool-recovery.so
-	# -rw-r--r-- 1 root root    9944 Nov  6 21:15 pgpool-regclass.so
-	###
-	sed -i "s/MODULE_PATHNAME/\/usr\/lib\/postgresql\/$DB_VERSION\/lib\/pgpool_adm/g" ~/pgpool-local/pgpool_adm.sql
-	# Note: error on line # 45 & 51 should retrun integer
-	sed -i "43,51s/record/integer/" ~/pgpool-local/pgpool_adm.sql
-
-	sed -i "s/MODULE_PATHNAME/\/usr\/lib\/postgresql\/$DB_VERSION\/lib\/pgpool-recovery/g" ~/pgpool-local/pgpool-recovery.sql
-	sed -i "s/\$libdir\/pgpool-recovery/\/usr\/lib\/postgresql\/$DB_VERSION\/lib\/pgpool-recovery/g" ~/pgpool-local/pgpool-recovery.sql
-
-	sed -i "s/MODULE_PATHNAME/\/usr\/lib\/postgresql\/$DB_VERSION\/lib\/pgpool-regclass/g" ~/pgpool-local/pgpool-regclass.sql
-
-	psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f ~/pgpool-local/pgpool_adm.sql
-	psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f ~/pgpool-local/pgpool-recovery.sql
-	psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f ~/pgpool-local/pgpool-regclass.sql
-
-	service postgresql restart
+	/etc/init.d/postgresql restart
 }
 
 inform_pgpool () {
 	retries=0
-	until curl -H "Content-Type: application/json" -X POST -d "{\"ip\":\"$APP_HOST\"}" http://$PGPOOL_API_HOST:$PGPOOL_API_PORT; do
+	until curl -H "Content-Type: application/json" -X POST -d "{\"ip\":\"$APP_HOST\", \"port\":\"$APP_PORT\"}" http://$PGPOOL_API_HOST:$PGPOOL_API_PORT; do
 		echo "[$(timestamp)] PGPOOL Server is not up yet, retry... [$(( retries++ ))]"
 		sleep 5
 	done
-}
-
-#added to automate JCatascopiaAgent installation
-setup_JCatascopiaAgent(){
-	wget -q https://raw.githubusercontent.com/CELAR/celar-deployment/master/vm/jcatascopia-agent.sh
-
-	wget -q http://$JCATASCOPIA_REPO/JCatascopiaProbes/PostgresProbe.jar
-	mv ./PostgresProbe.jar /usr/local/bin/
-
-	bash ./jcatascopia-agent.sh > /tmp/JCata.txt 2>&1
-
-	echo "probes_external=PostgresProbe,/usr/local/bin/PostgresProbe.jar" | sudo -S tee -a /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties
-	eval "sed -i 's/server_ip=.*/server_ip=$JCATASCOPIA_DASHBOARD/g' /usr/local/bin/JCatascopiaAgentDir/resources/agent.properties"
-
-	/etc/init.d/JCatascopia-Agent restart > /tmp/JCata.txt 2>&1
-
-	rm ./jcatascopia-agent.sh
 }
 
 echo "[$(timestamp)] ---- 1. Setup Host ----"
@@ -192,7 +141,7 @@ echo "[$(timestamp)] ---- 3. Setup Database ----"
 su postgres -c "$(typeset -f setup_database); setup_database" # Run function as user 'postgres'
 
 echo "[$(timestamp)] ---- 4. Restart PostgreSQL as root ----"
-service postgresql restart
+/etc/init.d/postgresql restart
 
 echo "[$(timestamp)] ---- 5. Import Data ----"
 su postgres -c "$(typeset -f import_data); import_data" # Run function as user 'postgres'
@@ -205,9 +154,6 @@ inform_pgpool
 
 echo "[$(timestamp)] ---- 8. Update IPTables rules ----"
 update_iptables
-
-echo "[$(timestamp)] ---- 9. Setting up JCatascopia Agent ----"
-setup_JCatascopiaAgent
 
 echo "[$(timestamp)] ---- Completed ----"
 
