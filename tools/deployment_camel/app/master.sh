@@ -188,8 +188,8 @@ case "$1" in
 		kill_master_servers
 		echo "[$(timestamp)] ---- 5. Export Variables ----"
 		export_variables
-		echo "[$(timestamp)] ---- 6. Setup Service Script ----"
-		setup_service_script
+		#echo "[$(timestamp)] ---- 6. Setup Service Script ----"
+		#setup_service_script
 	;;
 	start)
 		check_variables

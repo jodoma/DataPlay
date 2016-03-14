@@ -253,7 +253,7 @@ case "$1" in
 		check_variables
 		restart_cassandra
 		#exec sleep infinity
-		sleep infinity
+		#sleep infinity
 		;;
 	stop)
 		service cassandra stop
