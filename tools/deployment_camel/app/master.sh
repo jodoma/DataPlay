@@ -16,7 +16,7 @@ fi
 
 LOCAL_DIR=$(dirname $0)
 
-LOGFILENAME=frontend.log
+LOGFILENAME=master.log
 LOGFILE=$LOGDIR/$LOGFILENAME
 
 logsetup
@@ -139,8 +139,8 @@ start_master_server() {
 	fi
 	export GOPATH
 	project=dataplay
-	nohub $DEST/$APP/bin/$project > $LOG 2>&1&
-	echo "Done! $ sudo tail -f $DEST/$APP/$LOG for more details"
+	nohub $DEST/$APP/bin/$project > $LOGFILE 2>&1&
+	echo "Done! $ sudo tail -f $LOGFILE for more details"
 }
 
 #run_master_server () {
