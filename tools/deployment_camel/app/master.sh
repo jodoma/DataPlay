@@ -58,7 +58,7 @@ install_go () {
 	mkdir -p gocode && mkdir -p www
 
 	wget --retry-connrefused --waitretry=1 --read-timeout=20 --timeout=15 -t 0 -N https://storage.googleapis.com/golang/$GO_VERSION.linux-amd64.tar.gz
-	tar xf $GO_VERSION.linux-amd64.tar.gz
+	tar xzvf $GO_VERSION.linux-amd64.tar.gz
 
 	echo "export GOROOT=/home/ubuntu/go" >> /etc/profile.d/dataplay.sh
 	echo "PATH=\$PATH:\$GOROOT/bin" >> /etc/profile.d/dataplay.sh
