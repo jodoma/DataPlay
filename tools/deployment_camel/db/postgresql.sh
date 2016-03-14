@@ -73,7 +73,6 @@ import_data () {
 
 
 	cd ~
-
 	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
 
 	i="1"
@@ -101,6 +100,8 @@ setup_pgpool_access() {
 	PGPOOL_VERSION="3.3.4"
 
 	#cp /var/lib/postgresql/.pgpass ~/.pgpass
+	cd ~
+	echo "$DB_HOST:$DB_PORT:$DB_NAME:$DB_USER:$DB_PASSWORD" > .pgpass && chmod 0600 .pgpass
 
 	mkdir -p ~/pgpool-local
 	
