@@ -37,7 +37,8 @@ configure_redis () {
 	verify_variable_set "CLOUD_REDISINCOMING"
 	verify_variable_notempty "CLOUD_REDISINCOMING"
 	
-	redisIP=${CLOUD_REDISINCOMING%:*}
+	#redisIP=${CLOUD_REDISINCOMING%:*}
+	redisIP="0.0.0.0"
 	redisPort=${CLOUD_REDISINCOMING#*:}
 	
 	sed -i "s/bind .*/bind ${redisIP}/" /etc/redis/redis.conf
