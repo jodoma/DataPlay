@@ -385,7 +385,7 @@ case "$1" in
 		stop)
 			service haproxy stop
 			## FIxME
-			kill -9 1
+			### kill -9 1
 			;;
 		startdetect)
 			;;
