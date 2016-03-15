@@ -139,7 +139,7 @@ start_master_server() {
 	fi
 	export GOPATH
 	project=dataplay
-	nohub $DEST/$APP/bin/$project > $LOGFILE 2>&1&
+	nohup $DEST/$APP/bin/$project > $LOGFILE 2>&1&
 	echo "Done! $ sudo tail -f $LOGFILE for more details"
 }
 
