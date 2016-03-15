@@ -200,7 +200,7 @@ case "$1" in
 		;;
 	stop)
 		kill_master_servers
-		kill -9 1
+		#kill -9 1
 		;;
 	updateports)
 		check_variables
