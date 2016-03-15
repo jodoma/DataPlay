@@ -95,7 +95,9 @@ case "$1" in
         stopdetect)
                 ;;
         updateports)
+		service pgpool2 stop
 		setup_pgpool
+		service pgpool2 start		
                 ;;
 esac
 
