@@ -62,10 +62,10 @@ setuphost () {
 install_java () {
 
 	### FIXME: install Java 8
-	echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections && \
-	apt-add-repository -y ppa:webupd8team/java && \
-	apt-get update && \
-	apt-get install -y axel oracle-java8-installer && \
+	echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
+	apt-add-repository -y ppa:webupd8team/java
+	apt-get update
+	apt-get install -y axel oracle-java8-installer
 	apt-get autoclean
 
 
