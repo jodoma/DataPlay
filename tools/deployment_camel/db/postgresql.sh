@@ -44,6 +44,7 @@ setup_database () {
 	# From private network and omistack public network
 	echo "host    all             all             192.168.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	echo "host    all             all             134.60.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
+	echo "host    all             all             109.231.0.0/16        md5" >> /etc/postgresql/$DB_VERSION/main/pg_hba.conf
 	
 	# add IP and Port to listen on
 	verify_variable_set "PUBLIC_PSQLINCOMING"
