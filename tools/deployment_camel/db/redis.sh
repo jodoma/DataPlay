@@ -25,7 +25,7 @@ install_redis () {
 	mkdir -p /home/ubuntu && cd /home/ubuntu
 
 	apt-get update
-	apt-get install -y redis-server
+	apt-get install -y redis-server  sysstat htop
 	update-rc.d redis-server disable
 
 	cp /etc/redis/redis.conf /etc/redis/redis.conf.backup

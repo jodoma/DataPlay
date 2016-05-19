@@ -211,7 +211,7 @@ setuphost () {
 install_haproxy () {
 #	apt-add-repository -y ppa:vbernat/haproxy-1.5
 #	apt-get update
-	apt-get install -y haproxy
+	apt-get install -y haproxy sysstat htop
 
 	# Using single quotes to avoid bash $ variable expansion
 	echo '# HAProxy' >> /etc/rsyslog.conf

@@ -23,7 +23,7 @@ setuphost () {
 
 install_postgres () {
 	apt-get update
-	apt-get install -y axel postgresql postgresql-9.4-pgpool2
+	apt-get install -y axel postgresql postgresql-9.4-pgpool2  sysstat htop
 	apt-get autoclean
 	service postgresql restart
 }

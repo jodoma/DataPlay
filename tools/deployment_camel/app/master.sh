@@ -52,7 +52,7 @@ setuphost () {
 }
 
 install_go () {
-	apt-get install -y mercurial bzr
+	apt-get install -y mercurial bzr sysstat htop
 
 	mkdir -p /home/ubuntu && cd /home/ubuntu
 	mkdir -p gocode && mkdir -p www

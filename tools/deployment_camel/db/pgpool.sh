@@ -23,7 +23,7 @@ setuphost () {
 
 install_pgpool () {
 	apt-get update
-	apt-get install -y pgpool2	
+	apt-get install -y pgpool2 sysstat htop
 }
 
 setup_pgpool () {

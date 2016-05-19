@@ -85,7 +85,7 @@ install_nginx () {
 
 	apt-add-repository -y ppa:nginx/stable
 	apt-get update
-	apt-get install -y nginx-full unzip
+	apt-get install -y nginx-full unzip sysstat htop
 
 	unixts="$(date +'%Y%m%d%H%M%S')"
 	keyword="<filesystem>"
