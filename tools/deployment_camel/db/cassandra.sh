@@ -43,8 +43,8 @@ KEYSPACE="dataplay"
 
 #IP=`ifconfig eth0 | grep "inet addr" | awk -F: '{print $2}' | awk '{print $1}'`
 ### we will have to update this if we run inside a container.
-MAX_RETRIES="200"
-TIMEOUT="5"
+MAX_RETRIES="500"
+TIMEOUT="10"
 
 #JCATASCOPIA_REPO="109.231.126.62"
 #JCATASCOPIA_DASHBOARD="109.231.122.112"
@@ -65,10 +65,7 @@ install_java () {
 	echo oracle-java8-installer shared/accepted-oracle-license-v1-1 select true | debconf-set-selections
 	apt-add-repository -y ppa:webupd8team/java
 	apt-get update
-	apt-get install -y axel oracle-java8-installer
-	apt-get autoclean
-
-
+	apt-get install -y --allow-unauthenticated  axel oracle-java8-installer
 	. /etc/profile
 }
 
@@ -95,7 +92,7 @@ install_cassandra () {
 	echo "deb http://debian.datastax.com/community stable main" | sudo tee -a /etc/apt/sources.list.d/cassandra.sources.list && \
 	curl -L http://debian.datastax.com/debian/repo_key | sudo apt-key add - && \
 	apt-get update && \
-	apt-get install -y cassandra  sysstat htop
+	apt-get install -y --allow-unauthenticated cassandra sysstat htop
 
 	 sed -i -e 's/ulimit/#ulimit/g' /etc/init.d/cassandra
 	echo "export CASSANDRA_CONFIG=/etc/cassandra" >> /etc/profile.d/dataplay.sh
