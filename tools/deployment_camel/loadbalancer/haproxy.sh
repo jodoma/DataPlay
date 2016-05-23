@@ -394,7 +394,7 @@ case "$1" in
 		updateports)
 			check_variables
 			update_config_file
-			service haproxy restart
+			service haproxy reload
 			;;
 esac
 
