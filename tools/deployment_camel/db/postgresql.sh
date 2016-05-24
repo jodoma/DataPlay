@@ -57,6 +57,7 @@ setup_database () {
 	port=${PUBLIC_PSQLINCOMING}
 	echo "listen_addresses='${ip}'" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
 	echo "port=${port}" >> /etc/postgresql/$DB_VERSION/main/postgresql.conf
+	sed -i -e 's/max_connections = 100/max_connections = 150/g' /etc/postgresql/$DB_VERSION/main/postgresql.conf
 }
 
 import_data () {
