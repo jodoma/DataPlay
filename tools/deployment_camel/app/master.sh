@@ -18,6 +18,8 @@ LOCAL_DIR=$(dirname $0)
 
 LOGFILENAME=master.log
 LOGFILE=$LOGDIR/$LOGFILENAME
+DP_DATABASE_MAXIDLECONNS=10
+DP_DATABASE_MAXOPENCONNS=10
 
 logsetup
 
@@ -95,6 +97,8 @@ export_variables () {
 	echo "export DP_REDIS_PORT=$redisPort" >> /etc/profile.d/dataplay.sh
 	echo "export DP_CASSANDRA_HOST=$cassandraIP" >> /etc/profile.d/dataplay.sh
 	echo "export DP_CASSANDRA_PORT=$cassandraPort" >> /etc/profile.d/dataplay.sh
+	echo "export DP_DATABASE_MAXIDLECONNS=$DP_DATABASE_MAXIDLECONNS" >> /etc/profile.d/dataplay.sh
+	echo "export DP_DATABASE_MAXOPENCONNS=$DP_DATABASE_MAXOPENCONNS" >> /etc/profile.d/dataplay.sh
 
 	. /etc/profile
 
