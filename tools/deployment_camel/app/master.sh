@@ -147,6 +147,7 @@ start_master_server() {
 	fi
 	export GOPATH
 	project=dataplay
+	ulimit -n 500000 #increase number of open files
 	nohup $DEST/$APP/bin/$project > $LOGFILE 2>&1&
 	echo "Done! $ sudo tail -f $LOGFILE for more details"
 }
