@@ -28,7 +28,7 @@ install_postgres () {
 
 	# install packages
 	apt-get update
-	apt-get install -y axel postgresql postgresql-9.4-pgpool2  sysstat htop
+	apt-get install -y axel postgresql postgresql-9.4-pgpool2  sysstat htop dstat
 	apt-get autoclean
 	service postgresql restart
 }
