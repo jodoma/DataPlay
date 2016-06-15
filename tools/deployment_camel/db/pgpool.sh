@@ -11,6 +11,11 @@ if [ "$(id -u)" != "0" ]; then
 	exit 1
 fi
 
+DB_USER="playgen"
+DB_PASSWORD="aDam3ntiUm"
+DB_VERSION="9.4"
+
+
 timestamp () {
 	date +"%F %T,%3N"
 }
@@ -22,35 +27,39 @@ setuphost () {
 }
 
 install_pgpool () {
-	apt-get update
-	apt-get install -y pgpool2 sysstat htop
-	
-	cp /etc/pgpool-II-94/pcp.conf.sample /etc/pgpool-II-94/pcp.conf
-	echo "$DB_USER:`pg_md5 $DB_PASSWORD`" >> /etc/pgpool-II-94/pcp.conf
+        apt-get update
+        apt-get install -y pgpool2 sysstat htop
 
-	cp /etc/pgpool-II-94/pool_hba.conf.sample /etc/pgpool-II-94/pool_hba.conf
-	echo "host    all         all         0.0.0.0/0             md5" >> /etc/pgpool-II-94/pool_hba.conf
+        sed -i 's/^#$ModLoad imudp/$ModLoad imudp/g' /etc/rsyslog.conf
+        sed -i 's/^#$UDPServerRun 514/$UDPServerRun 514/g' /etc/rsyslog.conf
+        sed -i 's/^#$ModLoad imtcp/$ModLoad imtcp/g' /etc/rsyslog.conf
+        sed -i 's/^#$InputTCPServerRun 514/$InputTCPServerRun 514/g' /etc/rsyslog.conf
+        echo "local0.*                                                /var/log/pgpool.log" >> /etc/rsyslog.conf
 
-	pg_md5 -m -u $DB_USER $DB_PASSWORD # Generate pool_passwd
+        service rsyslog restart
+        # cp /etc/pgpool-II-94/pool_hba.conf.sample /etc/pgpool-II-94/pool_hba.conf
+        echo "host    all         all         0.0.0.0/0             md5" >> /etc/pgpool2/pool_hba.conf
 
-	systemctl restart pgpool-II-94
-	systemctl enable pgpool-II-94
+        pg_md5 -m -u $DB_USER $DB_PASSWORD # Generate pool_passwd
+
+        # systemctl restart pgpool-II-94
+        # systemctl enable pgpool-II-94
+        service pgpool2 restart
+        service pgpool2 stop
 }
 
 setup_pgpool () {
-	DB_USER="playgen"
-	DB_PASSWORD="aDam3ntiUm"
-	DB_VERSION="9.4"
+        verify_variable_set "PUBLIC_PGPOOLINCOMING"
+        verify_variable_notempty "PUBLIC_PGPOOLINCOMING"
 
-	verify_variable_set "PUBLIC_PGPOOLINCOMING"
-	verify_variable_notempty "PUBLIC_PGPOOLINCOMING"
+        cat /root/DataPlay/tools/deployment_camel/db/pgpool.conf > /etc/pgpool2/pgpool.conf
+        # cp /etc/pgpool-II-94/pcp.conf.sample /etc/pgpool-II-94/pcp.conf
+        echo "$DB_USER:`pg_md5 $DB_PASSWORD`" > /etc/pgpool2/pcp.conf
 
-	cat /root/DataPlay/tools/deployment_camel/db/pgpool.conf > /etc/pgpool2/pgpool.conf
-
-	# INJECT PASSWORD
-	pg_md5 -m -f /etc/pgpool2/pgpool.conf -u $DB_USER $DB_PASSWORD
-	chmod 660 /etc/pgpool2/pool_passwd
-	chgrp postgres /etc/pgpool2/pool_passwd
+        # INJECT PASSWORD
+        pg_md5 -m -f /etc/pgpool2/pgpool.conf -u $DB_USER $DB_PASSWORD
+        chmod 660 /etc/pgpool2/pool_passwd
+        chgrp postgres /etc/pgpool2/pool_passwd
 
 	# create config file, with postgres instances
 	verify_variable_set "CLOUD_PgPoolDownstream"
