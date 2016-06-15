@@ -24,6 +24,17 @@ setuphost () {
 install_pgpool () {
 	apt-get update
 	apt-get install -y pgpool2 sysstat htop
+	
+	cp /etc/pgpool-II-94/pcp.conf.sample /etc/pgpool-II-94/pcp.conf
+	echo "$DB_USER:`pg_md5 $DB_PASSWORD`" >> /etc/pgpool-II-94/pcp.conf
+
+	cp /etc/pgpool-II-94/pool_hba.conf.sample /etc/pgpool-II-94/pool_hba.conf
+	echo "host    all         all         0.0.0.0/0             md5" >> /etc/pgpool-II-94/pool_hba.conf
+
+	pg_md5 -m -u $DB_USER $DB_PASSWORD # Generate pool_passwd
+
+	systemctl restart pgpool-II-94
+	systemctl enable pgpool-II-94
 }
 
 setup_pgpool () {
