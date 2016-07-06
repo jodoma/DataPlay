@@ -5,15 +5,16 @@
 set -ex
 
 source $(dirname $0)/../helper.sh
+source $(dirname $0)/auth.inc.sh
 
 if [ "$(id -u)" != "0" ]; then
 	echo >&2 "Error: This script must be run as user 'root'";
 	exit 1
 fi
 
-DB_USER="playgen"
-DB_PASSWORD="aDam3ntiUm"
-DB_VERSION="9.4"
+#DB_USER="playgen"
+#DB_PASSWORD="aDam3ntiUm"
+#DB_VERSION="9.4"
 
 
 timestamp () {
@@ -39,13 +40,13 @@ install_pgpool () {
         service rsyslog restart
         # cp /etc/pgpool-II-94/pool_hba.conf.sample /etc/pgpool-II-94/pool_hba.conf
         echo "host    all         all         0.0.0.0/0             md5" >> /etc/pgpool2/pool_hba.conf
-
+	echo "$DB_USER:$(pg_md5 $DB_PASSWORD)" >> /etc/pgpool2/pcp.conf
         pg_md5 -m -u $DB_USER $DB_PASSWORD # Generate pool_passwd
+        chmod 660 /etc/pgpool2/pool_passwd
+        chgrp postgres /etc/pgpool2/pool_passwd
 
-        # systemctl restart pgpool-II-94
-        # systemctl enable pgpool-II-94
         service pgpool2 restart
-        service pgpool2 stop
+        #service pgpool2 stop
 }
 
 setup_pgpool () {
@@ -82,10 +83,50 @@ setup_pgpool () {
 		done
 	fi
 
-	echo $config_nodes >> /etc/pgpool2/pgpool.conf
+	echo "$config_nodes" >> /etc/pgpool2/pgpool.conf
 	# set port
 	echo "port = ${PUBLIC_PGPOOLINCOMING}" >> /etc/pgpool2/pgpool.conf	
 	
+}
+
+import_data () {
+	#Only import data if dataset is empty
+	psql -h $DB_HOST -p ${PUBLIC_PGPOOLINCOMING} -U $DB_USER -l | cut -d '|' -f 1 | grep -qw $DB_NAME
+	if [[ "$?" == "0" ]]; then
+		return;
+	fi
+
+	set -ex
+	MAX_RETRIES="200"
+
+	LASTDATE=$(date +%Y-%m-%d) # Today
+	BACKUP_DIR="postgresql/$LASTDATE-daily"
+	BACKUP_FILE="$DB_NAME.sql.gz"
+
+	i="1"
+	if [[ $i -ge $MAX_RETRIES ]]; then
+		echo >&2 "Error: Unable to fetch '$BACKUP_FILE' from backup server."; exit 1;
+	fi
+	until axel -a "http://$BACKUP_USER:$BACKUP_PASS@$BACKUP_HOST:$BACKUP_PORT/$BACKUP_DIR/$BACKUP_FILE"; do
+		LASTDATE=$(date +%Y-%m-%d --date="$LASTDATE -1 days") # Decrement by 1 Day
+		BACKUP_DIR="postgresql/$LASTDATE-daily"
+		echo "Latest backup not available, try fetching $LASTDATE"
+		i=$[$i+1]
+	done
+
+	gunzip -vk $BACKUP_FILE
+	createdb -h $DB_HOST -p ${PUBLIC_PGPOOLINCOMING} -U $DB_USER -O $DB_USER $DB_NAME
+	psql -h $DB_HOST -p ${PUBLIC_PGPOOLINCOMING} -U $DB_USER -d $DB_NAME -f $DB_NAME.sql
+}
+
+online_recovery(){
+	NODE_COUNT=$(/usr/sbin/pcp_node_count 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD);
+	for node in $(seq 0 $((NODE_COUNT-1))); do
+		NODE_STATE=$(/usr/sbin/pcp_node_info 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node | cut -d" " -f3);
+		if [[ "$NODE_STATE" == "3" ]]; then
+			/usr/sbin/pcp_recovery_node 30 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node;
+		fi
+	done
 }
 
 
@@ -115,9 +156,17 @@ case "$1" in
         stopdetect)
                 ;;
         updateports)
-		service pgpool2 stop
-		setup_pgpool
-		service pgpool2 start		
+		service pgpool2 reload
+		
+		# CH: WHY IS THE setup_pgpool NOT EXECUTED HERE? 
+		# HOW ARE NEW PostgreSQL NODES ADDED TO PGPOOL?
+		
+		#Load data if none exists
+		export -f import_data
+		su postgres -c -m 'import_data'
+		#Do online recovery for any new nodes
+		export -f online_recovery
+		su postgres -c -m 'online_recovery'
                 ;;
 esac
 
