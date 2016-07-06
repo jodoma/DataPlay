@@ -123,6 +123,11 @@ online_recovery(){
 	NODE_COUNT=$(/usr/sbin/pcp_node_count 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD);
 	for node in $(seq 0 $((NODE_COUNT-1))); do
 		NODE_STATE=$(/usr/sbin/pcp_node_info 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node | cut -d" " -f3);
+		# States: 
+		# 0 - This state is only used during the initialization. PCP will never display it.
+		# 1 - Node is up. No connections yet.
+		# 2 - Node is up. Connections are pooled.
+		# 3 - Node is down.
 		if [[ "$NODE_STATE" == "3" ]]; then
 			/usr/sbin/pcp_recovery_node 30 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node;
 		fi
@@ -156,10 +161,13 @@ case "$1" in
         stopdetect)
                 ;;
         updateports)
-		service pgpool2 reload
-		
 		# CH: WHY IS THE setup_pgpool NOT EXECUTED HERE? 
 		# HOW ARE NEW PostgreSQL NODES ADDED TO PGPOOL?
+		# service pgpool2 stop
+		# setup_pgpool
+		# service pgpool2 start
+		
+		service pgpool2 reload
 		
 		#Load data if none exists
 		export -f import_data
