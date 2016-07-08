@@ -50,13 +50,20 @@ install_pgpool () {
 }
 
 setup_pgpool () {
-        verify_variable_set "PUBLIC_PGPOOLINCOMING"
-        verify_variable_notempty "PUBLIC_PGPOOLINCOMING"
 
-        cat /root/DataPlay/tools/deployment_camel/db/pgpool.conf > /etc/pgpool2/pgpool.conf
+	# pcp configuration
         # cp /etc/pgpool-II-94/pcp.conf.sample /etc/pgpool-II-94/pcp.conf
         echo "$DB_USER:`pg_md5 $DB_PASSWORD`" > /etc/pgpool2/pcp.conf
+	
+	# pgpool configuration
+	write_pgpoolconf
+	
+}
 
+write_pgpoolconf(){
+        verify_variable_set "PUBLIC_PGPOOLINCOMING"
+        verify_variable_notempty "PUBLIC_PGPOOLINCOMING"
+        cat /root/DataPlay/tools/deployment_camel/db/pgpool.conf > /etc/pgpool2/pgpool.conf
         # INJECT PASSWORD
         pg_md5 -m -f /etc/pgpool2/pgpool.conf -u $DB_USER $DB_PASSWORD
         chmod 660 /etc/pgpool2/pool_passwd
@@ -73,20 +80,25 @@ setup_pgpool () {
 	    for x in $arr; do
 			ip=${x%:*}
 			port=${x#*:}
-			config_nodes=$config_nodes"
-				backend_hostname${counter} = '${ip}'
-				backend_port${counter} = ${port}
-				backend_weight${counter} = 1
-				backend_data_directory${counter} = '/var/lib/postgresql/9.4/main/'
-				backend_flag${counter} = 'ALLOW_TO_FAILOVER'"
+			write_pgpoolconf_backend $counter $ip $port
 			counter=$((counter+1))
 		done
 	fi
-
-	echo "$config_nodes" >> /etc/pgpool2/pgpool.conf
-	# set port
-	echo "port = ${PUBLIC_PGPOOLINCOMING}" >> /etc/pgpool2/pgpool.conf	
 	
+	# set port
+	echo "port = ${PUBLIC_PGPOOLINCOMING}" >> /etc/pgpool2/pgpool.conf
+}
+
+write_pgpoolconf_backend(){
+	nodeId=$1
+	nodeHostname=$2
+	nodePort=$3
+	echo "	backend_hostname${nodeId} = '${nodeHostname}'
+		backend_port${nodeId} = ${nodePort}
+		backend_weight${nodeId} = 1
+		backend_data_directory${nodeId} = '/var/lib/postgresql/9.4/main/'
+		backend_flag${nodeId} = 'ALLOW_TO_FAILOVER'" >> /etc/pgpool2/pgpool.conf
+
 }
 
 import_data () {
@@ -119,20 +131,79 @@ import_data () {
 	psql -h $DB_HOST -p ${PUBLIC_PGPOOLINCOMING} -U $DB_USER -d $DB_NAME -f $DB_NAME.sql
 }
 
-online_recovery(){
-	NODE_COUNT=$(/usr/sbin/pcp_node_count 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD);
-	for node in $(seq 0 $((NODE_COUNT-1))); do
-		NODE_STATE=$(/usr/sbin/pcp_node_info 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node | cut -d" " -f3);
-		# States: 
-		# 0 - This state is only used during the initialization. PCP will never display it.
-		# 1 - Node is up. No connections yet.
-		# 2 - Node is up. Connections are pooled.
-		# 3 - Node is down.
-		if [[ "$NODE_STATE" == "3" ]]; then
-			/usr/sbin/pcp_recovery_node 30 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node;
+synchronise_nodes(){
+	pgpoolRestartRequired=false
+
+	# get list of nodes from colosseum
+	declare -a colosseumNodes
+	if [ -z ${CLOUD_PgPoolDownstream} ] ; then 
+		echo "no postgres instances available"
+	else 
+	    colosseumNodes=($(echo $CLOUD_PgPoolDownstream | tr "," " "))
+	fi
+	
+	# get list of nodes from pgpool
+	declare -a pgpoolNodes
+	nodeCount=$(/usr/sbin/pcp_node_count 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD);
+	for node in $(seq 0 $((nodeCount-1))); do
+		nodeInfo=($(/usr/sbin/pcp_node_info 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node))
+		pgpoolNodes[$node]=$nodeInfo
+	done
+	
+	# walk through existing nodes in pgpool
+	for nodeId in ${!pgpoolNodes[@]}; do
+		nodeInfo=(${pgpoolNodes[$nodeId]})
+		#example: 192.168.1.220 5432 1 1.000000
+		currentHost=${nodeInfo[0]}":"${nodeInfo[1]}
+		if [[ ${colosseumNodes[@]} =~ (^| )$currentHost($| ) ]]; then
+			#echo "host should be there and is there, nothing to do!"
+			continue
+		else			
+			echo "remove host ${nodeInfo} from pgpool"
+			$(/usr/sbin/pcp_detach_node 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD $nodeInfo)
+			pgpoolRestartRequired=true
 		fi
 	done
+
+	# walk through nodes in colosseum
+	for nodeId in ${!colosseumNodes[@]}; do
+		nodeInfo=${colosseumNodes[$nodeId]}
+		ip=${instance%:*} 
+		port=${instance#*:}
+		currentHost=${ip}" "${port}
+		if [[ ${pgpoolNodes[@]} =~ (^| )$currentHost ]]; then
+			# nothing to do.
+			continue
+		else
+			# add new node
+			echo "add host ${currentHost} to pgpool with id $nodeCount"
+			write_pgpoolconf_backend $nodeCount $ip $port
+			pgpool reload
+			/usr/sbin/pcp_recovery_node 30 127.0.0.1 9898 $DB_USER $DB_PASSWORD $nodeCount
+		fi
+	done
+	
+	if $pgpoolRestartRequired ; then
+		write_pgpoolconf
+		service pgpool2 restart
+	fi
+	
 }
+
+#online_recovery(){
+#	NODE_COUNT=$(/usr/sbin/pcp_node_count 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD);
+#	for node in $(seq 0 $((NODE_COUNT-1))); do
+#		NODE_STATE=$(/usr/sbin/pcp_node_info 0 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node | cut -d" " -f3);
+#		# States: 
+#		# 0 - This state is only used during the initialization. PCP will never display it.
+#		# 1 - Node is up. No connections yet.
+#		# 2 - Node is up. Connections are pooled.
+#		# 3 - Node is down.
+#		if [[ "$NODE_STATE" == "3" ]]; then
+#			/usr/sbin/pcp_recovery_node 30 127.0.0.1 9898 $DB_USER $DB_PASSWORD $node;
+#		fi
+#	done
+#}
 
 
 case "$1" in
@@ -161,20 +232,12 @@ case "$1" in
         stopdetect)
                 ;;
         updateports)
-		# CH: WHY IS THE setup_pgpool NOT EXECUTED HERE? 
-		# HOW ARE NEW PostgreSQL NODES ADDED TO PGPOOL?
-		# service pgpool2 stop
-		# setup_pgpool
-		# service pgpool2 start
-		
-		service pgpool2 reload
-		
+		#Do online recovery for any new nodes
+		export -f synchronise_nodes
+		su postgres -c -m 'synchronise_nodes'
 		#Load data if none exists
 		export -f import_data
-		su postgres -c -m 'import_data'
-		#Do online recovery for any new nodes
-		export -f online_recovery
-		su postgres -c -m 'online_recovery'
+		su postgres -c -m 'import_data'		
                 ;;
 esac
 
