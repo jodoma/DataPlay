@@ -29,7 +29,7 @@ setuphost () {
 
 install_pgpool () {
         apt-get update
-        apt-get install -y pgpool2 sysstat htop
+        apt-get install -y pgpool2 sysstat htop axel
 
         sed -i 's/^#$ModLoad imudp/$ModLoad imudp/g' /etc/rsyslog.conf
         sed -i 's/^#$UDPServerRun 514/$UDPServerRun 514/g' /etc/rsyslog.conf
