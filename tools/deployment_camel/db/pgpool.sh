@@ -177,14 +177,14 @@ synchronise_nodes(){
 		else
 			# add new node
 			echo "add host ${currentHost} to pgpool with id $nodeCount"
-			write_pgpoolconf_backend $nodeCount $ip $port
+			su postgres -c -m 'write_pgpoolconf_backend $nodeCount $ip $port'
 			pgpool reload
 			/usr/sbin/pcp_recovery_node 30 127.0.0.1 9898 $DB_USER $DB_PASSWORD $nodeCount
 		fi
 	done
 	
 	if $pgpoolRestartRequired ; then
-		write_pgpoolconf
+		su postgres -c -m 'write_pgpoolconf'
 		service pgpool2 restart
 	fi
 	
