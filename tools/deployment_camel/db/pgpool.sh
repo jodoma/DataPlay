@@ -234,6 +234,7 @@ case "$1" in
         updateports)
 		#Do online recovery for any new nodes
 		export -f synchronise_nodes
+		export -f write_pgpoolconf_backend
 		su postgres -c -m 'synchronise_nodes'
 		#Load data if none exists
 		export -f import_data
