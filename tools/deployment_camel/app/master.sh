@@ -76,6 +76,7 @@ install_go () {
 }
 
 export_variables () {
+	export CLOUD_MasterNodePgPool=130.239.48.135:5432
 	verify_variable_set "CLOUD_MasterNodePgPool"
 	verify_variable_notempty "CLOUD_MasterNodePgPool"
 	pgIP=${CLOUD_MasterNodePgPool%:*}
