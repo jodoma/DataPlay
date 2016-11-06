@@ -354,6 +354,8 @@ setup_JCatascopiaAgent(){
 
 #command -v npm >/dev/null 2>&1 || { echo >&2 "Error: Command 'npm' not found!"; exit 1; }
 
+sudo service nginx stop
+
 case "$1" in 
 	        install)
 			echo "[$(timestamp)] ---- 1. Setup Host ----"
